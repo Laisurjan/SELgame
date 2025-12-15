@@ -126,12 +126,13 @@
         <span class="font-black text-white">先點選一張卡片</span>，再按下方按鈕處理：<span class="font-black text-green-300">安撫</span>／<span class="font-black text-yellow-300">說明</span>／<span class="font-black text-red-300">行動</span>。
       </div>
 
+      <!-- ✅ 修正：移除 inline onclick，改由 module addEventListener 綁定 -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <button onclick="beginPrestart('newbie')"
+        <button id="btn-newbie"
                 class="bg-emerald-600 hover:bg-emerald-500 text-white text-2xl font-black py-5 rounded-xl shadow-lg transition transform hover:scale-[1.02]">
           新手模式
         </button>
-        <button onclick="beginPrestart('expert')"
+        <button id="btn-expert"
                 class="bg-blue-600 hover:bg-blue-500 text-white text-2xl font-black py-5 rounded-xl shadow-lg transition transform hover:scale-[1.02]">
           專家模式
         </button>
@@ -336,7 +337,6 @@
     query, orderByChild, limitToLast, get
   } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 
-  // ✅ 你的 Firebase 設定（保持不變）
   const FIREBASE_CONFIG = {
     apiKey: "AIzaSyD6y-tPy0grqmZAUTLRKGbp5RxdmK1t7pA",
     authDomain: "selmode.firebaseapp.com",
@@ -392,6 +392,7 @@
     { id: 'toilet',  emoji: '🚻', title: '廁所排隊爆滿',     prompt: '我快憋不住了！',                 type: 'act',     color: 'bg-emerald-700' },
     { id: 'headset', emoji: '🎧', title: '耳機壞了',         prompt: '耳機沒聲音，幫我處理。',         type: 'act',     color: 'bg-violet-700' }
   ];
+
   const EVENT_BY_ID = Object.fromEntries(EVENTS.map(e => [e.id, e]));
 
   const IMPACTS = {
@@ -408,17 +409,29 @@
     { r1: "「你撐住的瞬間，就是職場素養被看見的時刻。」", r2: "「更早覺察、更快降壓、更清楚決策。」" }
   ];
 
-  N_RULES = {
-    gender: { onSpawn: [{ id: 'rude', p: 0.55, delayMs: [650, 1100] }, { id: 'angry', p: 0.25, delayMs: [800, 1200] }],
-              onResolve: [{ id: 'angry', p: 0.20, delayMs: [650, 1100] }] },
-    fat: { onResolve: [{ id: 'seat', p: 0.55, delayMs: [650, 1100] }] },
-    narrow: { onResolve: [{ id: 'seat', p: 0.45, delayMs: [650, 1100] }] },
-    seat: { onResolve: [{ id: 'anxiety', p: 0.35, delayMs: [650, 1050] }] },
-    mealbad: { onResolve: [{ id: 'angry', p: 0.45, delayMs: [650, 1100] }] },
-    wifi: { onResolve: [{ id: 'rude', p: 0.35, delayMs: [650, 1100] }] },
-    spill: { onResolve: [{ id: 'angry', p: 0.35, delayMs: [650, 1100] }] },
-    sick: { onResolve: [{ id: 'panic', p: 0.30, delayMs: [650, 1100] }] },
-    baby: { onResolve: [{ id: 'rude', p: 0.28, delayMs: [650, 1100] }] }
+  /*********************
+   * ✅ 修正重點 1：連鎖事件規則「正確宣告」且名稱一致
+   * - 你原本寫 N_RULES = {...} 會直接炸（module strict mode）
+   * - 下方又用 CHAIN_RULES，導致名稱不一致
+   *********************/
+  const CHAIN_RULES = {
+    gender: {
+      onSpawn: [
+        { id: 'rude', p: 0.55, delayMs: [650, 1100] },
+        { id: 'angry', p: 0.25, delayMs: [800, 1200] }
+      ],
+      onResolve: [
+        { id: 'angry', p: 0.20, delayMs: [650, 1100] }
+      ]
+    },
+    fat:     { onResolve: [{ id: 'seat',   p: 0.55, delayMs: [650, 1100] }] },
+    narrow:  { onResolve: [{ id: 'seat',   p: 0.45, delayMs: [650, 1100] }] },
+    seat:    { onResolve: [{ id: 'anxiety',p: 0.35, delayMs: [650, 1050] }] },
+    mealbad: { onResolve: [{ id: 'angry',  p: 0.45, delayMs: [650, 1100] }] },
+    wifi:    { onResolve: [{ id: 'rude',   p: 0.35, delayMs: [650, 1100] }] },
+    spill:   { onResolve: [{ id: 'angry',  p: 0.35, delayMs: [650, 1100] }] },
+    sick:    { onResolve: [{ id: 'panic',  p: 0.30, delayMs: [650, 1100] }] },
+    baby:    { onResolve: [{ id: 'rude',   p: 0.28, delayMs: [650, 1100] }] }
   };
 
   const MODES = {
@@ -426,7 +439,6 @@
     expert: { name: '專家模式', spawnMul: 1.0, maxEvents: 6, fatigueMin: 0.2, online: true }
   };
 
-  // ✅ 排行榜抓最近 N 筆，再前端算 Top50
   const LEADERBOARD_RECENT_LIMIT = 400;
 
   let state = {
@@ -454,7 +466,6 @@
     lastLbFetchAt: 0,
     lbAutoTimer: null,
 
-    // ✅ 疲勞提醒節流
     fatigueLastMsg: "",
     fatigueMsgAt: 0
   };
@@ -462,7 +473,9 @@
   const els = {
     start: {
       wrap: document.getElementById('start-screen'),
-      status: document.getElementById('start-status')
+      status: document.getElementById('start-status'),
+      btnNewbie: document.getElementById('btn-newbie'),
+      btnExpert: document.getElementById('btn-expert')
     },
     timer: document.getElementById('timer'),
     stressBar: document.getElementById('stress-bar'),
@@ -528,12 +541,26 @@
   };
   const randInt = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
 
+  /*********************
+   * ✅ 修正重點 2：首頁按鈕綁定（不再靠 inline onclick）
+   *********************/
+  function wireStartButtons() {
+    if (els.start.btnNewbie) {
+      els.start.btnNewbie.addEventListener('click', () => beginPrestart('newbie'));
+    }
+    if (els.start.btnExpert) {
+      els.start.btnExpert.addEventListener('click', () => beginPrestart('expert'));
+    }
+    console.log("✅ Start buttons wired");
+  }
+
   (async () => {
+    wireStartButtons();
     const ok = await initFirebase();
     els.start.status.textContent = ok ? "Firebase：已連線（專家模式可用）" : "Firebase：連線失敗（專家模式暫不可用）";
   })();
 
-  window.beginPrestart = async (modeKey) => {
+  async function beginPrestart(modeKey) {
     state.modeKey = modeKey;
     state.mode = MODES[modeKey];
 
@@ -576,7 +603,7 @@
       setTimeout(tick, 1000);
     };
     tick();
-  };
+  }
 
   function resetStateForGame() {
     state.time = GAME_DURATION;
@@ -786,63 +813,54 @@
     return state.mode.fatigueMin;
   }
 
- /*********************
- * ✅ 疲勞提醒（穩定版）
- * - 只在「連續同一招 >= 2」才提示疲勞
- * - 文字沒變：不重刷
- * - 有變化：至少間隔 2.5 秒才更新（避免狂跳）
- * - force=true：允許立刻更新一次（例如開局/切畫面）
- *********************/
-function updateFatigueUI(force = false) {
-  const labels = { soothe: '安撫', explain: '說明', act: '行動' };
+  function updateFatigueUI(force = false) {
+    const labels = { soothe: '安撫', explain: '說明', act: '行動' };
 
-  // 1) UI（效果條）
-  for (const key of ['soothe','explain','act']) {
-    const count = state.fatigue[key];
-    const mul = getMultiplier(count);
-    const pct = Math.round(mul * 100);
-    els.bars[key].style.width = `${pct}%`;
-    els.meta[key].textContent = `效果 ${pct}%`;
-  }
+    for (const key of ['soothe','explain','act']) {
+      const count = state.fatigue[key];
+      const mul = getMultiplier(count);
+      const pct = Math.round(mul * 100);
+      els.bars[key].style.width = `${pct}%`;
+      els.meta[key].textContent = `效果 ${pct}%`;
+    }
 
-  // 2) 訊息（只抓目前連續那一招）
-  let streakKey = null;
-  let streakCount = 0;
-  for (const k of ['soothe','explain','act']) {
-    if (state.fatigue[k] > 0) { streakKey = k; streakCount = state.fatigue[k]; break; }
-  }
+    let streakKey = null;
+    let streakCount = 0;
+    for (const k of ['soothe','explain','act']) {
+      if (state.fatigue[k] > 0) { streakKey = k; streakCount = state.fatigue[k]; break; }
+    }
 
-  let msg = "輪替使用三種做法，效果最好";
-  if (streakKey && streakCount >= 2) {
-    const wPct = Math.round(getMultiplier(streakCount) * 100);
-    const hint =
-      streakKey === 'act'
-        ? "建議：先接住情緒，再做處置"
-        : streakKey === 'explain'
-          ? "建議：先共感，再說明"
-          : "建議：必要時也要說明或行動";
-    msg = `連續使用「${labels[streakKey]}」效果剩 ${wPct}%　${hint}`;
-  }
+    let msg = "輪替使用三種做法，效果最好";
+    if (streakKey && streakCount >= 2) {
+      const wPct = Math.round(getMultiplier(streakCount) * 100);
+      const hint =
+        streakKey === 'act'
+          ? "建議：先接住情緒，再做處置"
+          : streakKey === 'explain'
+            ? "建議：先共感，再說明"
+            : "建議：必要時也要說明或行動";
+      msg = `連續使用「${labels[streakKey]}」效果剩 ${wPct}%　${hint}`;
+    }
 
-  const now = Date.now();
-  const COOLDOWN = 2500;
+    const now = Date.now();
+    const COOLDOWN = 2500;
 
-  // 3) 只在「訊息變了」才考慮更新；且至少隔 COOLDOWN
-  if (force) {
+    if (force) {
+      els.fatigueMsg.textContent = msg;
+      state.fatigueLastMsg = msg;
+      state.fatigueMsgAt = now;
+      return;
+    }
+
+    if (msg === state.fatigueLastMsg) return;
+    if ((now - state.fatigueMsgAt) < COOLDOWN) return;
+
     els.fatigueMsg.textContent = msg;
     state.fatigueLastMsg = msg;
     state.fatigueMsgAt = now;
-    return;
   }
 
-  if (msg === state.fatigueLastMsg) return;             // 同一句：永遠不刷（杜絕連發感）
-  if ((now - state.fatigueMsgAt) < COOLDOWN) return;    // 太近：不刷
-
-  els.fatigueMsg.textContent = msg;
-  state.fatigueLastMsg = msg;
-  state.fatigueMsgAt = now;
-}
-
+  // ✅ 保留 inline onclick：確保掛到 window
   window.handleAction = (actionType) => {
     if (!state.selectedEventId || !state.isPlaying) return;
 
@@ -853,7 +871,6 @@ function updateFatigueUI(force = false) {
     const counts = state.fatigue[actionType];
     const multiplier = getMultiplier(counts);
 
-    // ✅ 連續疲勞：同一招 +1，其他歸零（這本來就是「短暫連續」）
     for (let key in state.fatigue) {
       if (key === actionType) state.fatigue[key]++;
       else state.fatigue[key] = 0;
@@ -961,9 +978,6 @@ function updateFatigueUI(force = false) {
     }
   }
 
-  /*********************
-   * ✅ 統一榜：寫入（保持 push set）
-   *********************/
   window.saveScoreOnline = async () => {
     if (!state.mode.online) return;
 
@@ -990,19 +1004,12 @@ function updateFatigueUI(force = false) {
       if (!ok) throw new Error("Firebase 初始化失敗");
       if (!fb.user) throw new Error("使用者未登入");
 
-      console.log("準備寫入資料:", payload);
-
       const listRef = ref(fb.db, "scores");
       const newRef = push(listRef);
-
-      console.log("寫入路徑:", newRef.toString());
       await set(newRef, payload);
 
-      console.log("寫入成功！");
       els.lb.btnSave.textContent = "已登記";
       els.lb.status.textContent = "登記成功，刷新榜單…";
-
-      // ✅ 立刻刷新（抓最近 400 再算 Top50）
       await refreshLeaderboard(true);
 
     } catch (e) {
@@ -1022,73 +1029,61 @@ function updateFatigueUI(force = false) {
     }
   };
 
- /*********************
- * ✅ 統一榜：讀取（修正版）
- * - 只抓最近 400（orderByChild(createdAt)）
- * - 前端算 Top50：score desc → stress asc → resolve desc → createdAt desc
- *********************/
-window.refreshLeaderboard = async (force = false) => {
-  console.log(
-    "REFRESH_LEADERBOARD_BUILD",
-    "createdAt-only",
-    "force=", force,
-    new Date().toISOString()
-  );
+  window.refreshLeaderboard = async (force = false) => {
+    if (!state.mode.online) return;
 
-  if (!state.mode.online) return;
+    const now = Date.now();
+    if (!force && now - state.lastLbFetchAt < 4500) return;
+    state.lastLbFetchAt = now;
 
-  const now = Date.now();
-  if (!force && now - state.lastLbFetchAt < 4500) return;
-  state.lastLbFetchAt = now;
+    els.lb.status.textContent = "更新中…";
 
-  els.lb.status.textContent = "更新中…";
+    try {
+      const ok = await initFirebase();
+      if (!ok) throw new Error("Firebase init failed");
 
-  try {
-    const ok = await initFirebase();
-    if (!ok) throw new Error("Firebase init failed");
+      const qRecent = query(
+        ref(fb.db, "scores"),
+        orderByChild("createdAt"),
+        limitToLast(LEADERBOARD_RECENT_LIMIT)
+      );
+      const snap = await get(qRecent);
 
-    const qRecent = query(
-      ref(fb.db, "scores"),
-      orderByChild("createdAt"),
-      limitToLast(LEADERBOARD_RECENT_LIMIT)
-    );
-    const snap = await get(qRecent);
-
-    const arr = [];
-    snap.forEach(ch => {
-      const v = ch.val() || {};
-      arr.push({
-        key: ch.key,
-        name: v.name ?? "—",
-        score: Number(v.score ?? 0),
-        stress: Number(v.stress ?? 0),
-        resolve: Number(v.resolve ?? 0),
-        createdAt: Number(v.createdAt ?? 0)
+      const arr = [];
+      snap.forEach(ch => {
+        const v = ch.val() || {};
+        arr.push({
+          key: ch.key,
+          name: v.name ?? "—",
+          score: Number(v.score ?? 0),
+          stress: Number(v.stress ?? 0),
+          resolve: Number(v.resolve ?? 0),
+          createdAt: Number(v.createdAt ?? 0)
+        });
       });
-    });
 
-    const latest20 = [...arr]
-      .sort((a,b) => (b.createdAt - a.createdAt))
-      .slice(0, 20);
+      const latest20 = [...arr]
+        .sort((a,b) => (b.createdAt - a.createdAt))
+        .slice(0, 20);
 
-    const top50 = [...arr]
-      .sort((a,b) => {
-        const ds = b.score - a.score; if (ds !== 0) return ds;
-        const dst = a.stress - b.stress; if (dst !== 0) return dst;
-        const dr = b.resolve - a.resolve; if (dr !== 0) return dr;
-        return b.createdAt - a.createdAt;
-      })
-      .slice(0, 50);
+      const top50 = [...arr]
+        .sort((a,b) => {
+          const ds = b.score - a.score; if (ds !== 0) return ds;
+          const dst = a.stress - b.stress; if (dst !== 0) return dst;
+          const dr = b.resolve - a.resolve; if (dr !== 0) return dr;
+          return b.createdAt - a.createdAt;
+        })
+        .slice(0, 50);
 
-    renderTop50(top50);
-    renderLatest20(latest20);
+      renderTop50(top50);
+      renderLatest20(latest20);
 
-    els.lb.status.textContent = `更新 ${fmtTime(Date.now())}（近 ${Math.min(arr.length, LEADERBOARD_RECENT_LIMIT)} 筆計算）`;
-  } catch (e) {
-    console.error("refreshLeaderboard error:", e);
-    els.lb.status.textContent = "更新失敗（可能是 Rules / 網路 / indexOn）";
-  }
-};
+      els.lb.status.textContent = `更新 ${fmtTime(Date.now())}（近 ${Math.min(arr.length, LEADERBOARD_RECENT_LIMIT)} 筆計算）`;
+    } catch (e) {
+      console.error("refreshLeaderboard error:", e);
+      els.lb.status.textContent = "更新失敗（可能是 Rules / 網路 / indexOn）";
+    }
+  };
 
   function renderTop50(items) {
     els.lb.top50.innerHTML = "";
@@ -1125,9 +1120,7 @@ window.refreshLeaderboard = async (force = false) => {
     }[c]));
   }
 
-  window.restartSameMode = () => {
-    startGame();
-  };
+  window.restartSameMode = () => startGame();
 
   window.backToHome = () => {
     clearInterval(state.timerInterval);
