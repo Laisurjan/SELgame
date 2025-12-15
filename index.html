@@ -130,7 +130,7 @@
 
       <div id="start-note" class="mt-5 text-sm text-slate-300 opacity-90 leading-relaxed">
         新手模式：單機計分，不比賽<br/>
-        專家模式：統一榜計分（需網路）
+        專家模式：統一榜計分，需要網路
       </div>
     </div>
   </div>
@@ -296,13 +296,18 @@
       </div>
 
       <div class="mt-4 text-xs text-slate-400">
-        為了穩定，排行榜不做每秒自動刷新；可手動刷新或每 8 秒自動一次。
+        為了穩定，排行榜不做每秒自動刷新，可手動刷新或每 8 秒自動一次
       </div>
     </div>
 
-    <button onclick="location.reload()" class="text-gray-400 hover:text-white border border-gray-600 hover:border-white px-8 py-3 rounded-full transition">
-      下一位挑戰者
-    </button>
+    <div class="flex flex-col sm:flex-row gap-3">
+      <button onclick="backToStart()" class="text-gray-400 hover:text-white border border-gray-600 hover:border-white px-8 py-3 rounded-full transition">
+        回到主畫面再玩一次
+      </button>
+      <button onclick="location.reload()" class="text-gray-400 hover:text-white border border-gray-600 hover:border-white px-8 py-3 rounded-full transition">
+        下一位挑戰者
+      </button>
+    </div>
   </div>
 
 <script type="module">
@@ -316,7 +321,6 @@
     query, orderByChild, limitToLast, get
   } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 
-  // ✅ 已填入你的 Firebase 設定（模組版用這份）
   const FIREBASE_CONFIG = {
     apiKey: "AIzaSyD6y-tPy0grqmZAUTLRKGbp5RxdmK1t7pA",
     authDomain: "selmode.firebaseapp.com",
@@ -334,7 +338,7 @@
   };
 
   function isConfigReady() {
-    return !!(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.authDomain && FIREBASE_CONFIG.databaseURL && FIREBASE_CONFIG.projectId && FIREBASE_CONFIG.appId);
+    return !!(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.databaseURL && FIREBASE_CONFIG.projectId && FIREBASE_CONFIG.appId);
   }
 
   async function initFirebaseIfNeeded() {
@@ -384,7 +388,6 @@
   ];
   const EVENT_BY_ID = Object.fromEntries(EVENTS.map(e => [e.id, e]));
 
-  // Action -> EventType : [Satisfaction Δ, Stress Δ]
   const IMPACTS = {
     soothe:  { soothe: [ 14, -10], explain: [  6,  -6], act: [  4,   0] },
     explain: { soothe: [ -6,   6], explain: [ 11,  -6], act: [  1,   4] },
@@ -413,8 +416,11 @@
   };
 
   const MODES = {
-    newbie: { name: '新手模式', spawnMul: 2.2, maxEvents: 4, fatigueMin: 0.4, online: false },
-    expert: { name: '專家模式', spawnMul: 1.0, maxEvents: 6, fatigueMin: 0.2, online: true }
+    // 新手：更不容易在 60 秒前被狀態達界，但規則不變，只是代價更溫和
+    newbie: { name: '新手模式', spawnMul: 2.2, maxEvents: 4, fatigueMin: 0.4, online: false,
+              neglectSatMul: 0.65, neglectStressMul: 0.70, impactMul: 0.90 },
+    expert: { name: '專家模式', spawnMul: 1.0, maxEvents: 6, fatigueMin: 0.2, online: true,
+              neglectSatMul: 1.00, neglectStressMul: 1.00, impactMul: 1.00 }
   };
 
   /*********************
@@ -442,7 +448,18 @@
     finalMult: 1.0,
 
     lastLbFetchAt: 0,
-    lbAutoTimer: null
+    lbAutoTimer: null,
+
+    // prestart control
+    prestartTimerId: null,
+    prestartActive: false,
+
+    // fatigue message throttling
+    lastFatigueMsg: "",
+    lastFatigueShownAt: 0,
+
+    // streak tracking for end-note
+    streak: { cur: null, curLen: 0, best: null, bestLen: 0 }
   };
 
   const els = {
@@ -495,7 +512,6 @@
       wrap: document.getElementById('leaderboard-wrap'),
       status: document.getElementById('lb-status'),
       btnSave: document.getElementById('btn-save'),
-      btnRefresh: document.getElementById('btn-refresh'),
       name: document.getElementById('player-name'),
       top20: document.getElementById('top20-body'),
       latest10: document.getElementById('latest10-body')
@@ -512,25 +528,98 @@
 
   function randInt(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
 
+  function stopAllTimers() {
+    clearInterval(state.timerInterval);
+    clearInterval(state.spawnerInterval);
+    clearInterval(state.neglectInterval);
+    clearInterval(state.lbAutoTimer);
+    state.timerInterval = null;
+    state.spawnerInterval = null;
+    state.neglectInterval = null;
+    state.lbAutoTimer = null;
+
+    if (state.prestartTimerId) {
+      clearTimeout(state.prestartTimerId);
+      state.prestartTimerId = null;
+    }
+    state.prestartActive = false;
+  }
+
+  function clearEventsDom() {
+    els.eventArea.querySelectorAll('.event-card').forEach(n => n.remove());
+    els.emptyMsg.classList.remove('hidden');
+  }
+
+  function clearResultFade() {
+    document.querySelectorAll('.fade-in-text').forEach(el => el.classList.remove('visible'));
+  }
+
+  function resetToInitState() {
+    stopAllTimers();
+    state.isPlaying = false;
+
+    state.time = GAME_DURATION;
+    state.satisfaction = 70;
+    state.stress = 20;
+    state.resolveCount = 0;
+    state.activeEvents = [];
+    state.selectedEventId = null;
+    state.fatigue = { soothe: 0, explain: 0, act: 0 };
+    state.currentSpawnMs = null;
+
+    state.finalScore = 0;
+    state.finalMult = 1.0;
+
+    state.lastFatigueMsg = "";
+    state.lastFatigueShownAt = 0;
+
+    state.streak = { cur: null, curLen: 0, best: null, bestLen: 0 };
+
+    document.body.classList.remove('shake-hard');
+    clearEventsDom();
+    clearResultFade();
+
+    updateButtonsState(false);
+    updateUI();
+    updateFatigueUI(true);
+  }
+
+  window.backToStart = () => {
+    resetToInitState();
+    els.pre.wrap.classList.add('hidden');
+    document.getElementById('game-screen').classList.add('hidden');
+    els.result.wrap.classList.add('hidden');
+    document.getElementById('start-screen').classList.remove('hidden');
+  };
+
   /*********************
    *  開始前教學（含四項）
    *********************/
   window.beginPrestart = (modeKey) => {
+    // 強制回到乾淨狀態，確保可重玩
+    resetToInitState();
+
     state.modeKey = modeKey;
     state.mode = MODES[modeKey];
 
     document.getElementById('start-screen').classList.add('hidden');
+    els.result.wrap.classList.add('hidden');
+    document.getElementById('game-screen').classList.add('hidden');
+
     els.pre.wrap.classList.remove('hidden');
+    state.prestartActive = true;
 
     let t = 10;
     const tips = [
       "先點選事件卡片，再按下方按鈕處理",
-      "顧客滿意度會下降：放著不處理會更快下降",
-      "情緒壓力會上升：按錯或放著不處理都會升",
-      "任一項爆掉就結束：滿意度歸零或壓力爆表"
+      "顧客滿意度會下降，放著不處理會更快下降",
+      "情緒壓力會上升，按錯或放著不處理都會升",
+      "任一項達界就結束，滿意度歸零或壓力爆表"
     ];
 
     const tick = () => {
+      if (!state.prestartActive) return;
+
       els.pre.num.textContent = t;
 
       let idx = 0;
@@ -543,11 +632,12 @@
 
       t--;
       if (t < 0) {
+        state.prestartActive = false;
         els.pre.wrap.classList.add('hidden');
         startGame();
         return;
       }
-      setTimeout(tick, 1000);
+      state.prestartTimerId = setTimeout(tick, 1000);
     };
 
     tick();
@@ -556,7 +646,12 @@
   /*********************
    *  遊戲主流程
    *********************/
-  function resetStateForGame() {
+  function startGame() {
+    // 進入遊戲前，再確保一次乾淨畫面（但保留 mode）
+    stopAllTimers();
+    clearEventsDom();
+    clearResultFade();
+
     state.time = GAME_DURATION;
     state.satisfaction = 70;
     state.stress = 20;
@@ -564,44 +659,38 @@
     state.activeEvents = [];
     state.selectedEventId = null;
     state.fatigue = { soothe: 0, explain: 0, act: 0 };
-    state.isPlaying = false;
     state.currentSpawnMs = null;
+    state.isPlaying = true;
 
-    clearInterval(state.timerInterval);
-    clearInterval(state.spawnerInterval);
-    clearInterval(state.neglectInterval);
-    clearInterval(state.lbAutoTimer);
-
-    els.eventArea.querySelectorAll('.event-card').forEach(n => n.remove());
-    els.emptyMsg.classList.remove('hidden');
-  }
-
-  function startGame() {
-    resetStateForGame();
+    state.streak = { cur: null, curLen: 0, best: null, bestLen: 0 };
 
     document.getElementById('game-screen').classList.remove('hidden');
     document.getElementById('game-screen').classList.add('flex');
 
     els.modeBadge.textContent = `${state.mode.name}｜事件上限 ${state.mode.maxEvents}｜疲勞最低 ${Math.round(state.mode.fatigueMin*100)}%`;
 
-    state.isPlaying = true;
     updateButtonsState(false);
     updateUI();
     updateFatigueUI(true);
 
+    // Timer
     state.timerInterval = setInterval(() => {
       state.time--;
       updateUI();
       updateDifficulty();
-      if (state.time <= 0) endGame();
+      if (state.time <= 0) endGame("time");
     }, 1000);
 
+    // Spawner initial
     setSpawner(Math.round(2200 * state.mode.spawnMul));
 
+    // Neglect penalty：新手更溫和，但規則不變
     state.neglectInterval = setInterval(() => {
+      if (!state.isPlaying) return;
+
       if (state.activeEvents.length > 0) {
-        const satPenalty = state.activeEvents.length * 2.0;
-        const stressPenalty = state.activeEvents.length * 1.0;
+        const satPenalty = state.activeEvents.length * 2.0 * state.mode.neglectSatMul;
+        const stressPenalty = state.activeEvents.length * 1.0 * state.mode.neglectStressMul;
 
         state.satisfaction = Math.max(0, state.satisfaction - satPenalty);
         state.stress = Math.min(100, state.stress + stressPenalty);
@@ -751,7 +840,19 @@
     return state.mode.fatigueMin;
   }
 
-  function updateFatigueUI() {
+  function updateStreak(actionType) {
+    if (state.streak.cur === actionType) state.streak.curLen++;
+    else {
+      state.streak.cur = actionType;
+      state.streak.curLen = 1;
+    }
+    if (state.streak.curLen > state.streak.bestLen) {
+      state.streak.bestLen = state.streak.curLen;
+      state.streak.best = actionType;
+    }
+  }
+
+  function updateFatigueUI(force = false) {
     const labels = { soothe: '安撫', explain: '說明', act: '行動' };
 
     for (const key of ['soothe','explain','act']) {
@@ -762,21 +863,32 @@
       els.meta[key].textContent = `效果 ${pct}%`;
     }
 
+    // 重要：疲勞提示改為「連續 ≥2 才提醒」，避免碎念與誤判成總量懲罰
     const worst = ['soothe','explain','act'].sort((a,b)=>state.fatigue[b]-state.fatigue[a])[0];
     const wCount = state.fatigue[worst];
     const wPct = Math.round(getMultiplier(wCount) * 100);
 
-    let msg = "輪替使用三種做法，效果最好";
-    if (wCount >= 1) {
+    let msg = "輪替使用三種做法，影響力最穩定";
+    if (wCount >= 2) {
       const hint =
         worst === 'act'
           ? "先接住情緒，再做處置"
           : worst === 'explain'
             ? "先共感，再說明"
-            : "需要時也要說明或行動";
-      msg = `你連續用「${labels[worst]}」效果剩 ${wPct}%　${hint}`;
+            : "也需要說明或行動來收斂狀態";
+      msg = `你開始連續用同一種做法，影響力下降到 ${wPct}%　${hint}`;
+      if (wCount >= 3) {
+        msg = `你連續用「${labels[worst]}」已經變成習慣，影響力剩 ${wPct}%　${hint}`;
+      }
     }
-    els.fatigueMsg.textContent = msg;
+
+    const now = Date.now();
+    const shouldUpdate = force || (msg !== state.lastFatigueMsg && (now - state.lastFatigueShownAt > 600));
+    if (shouldUpdate) {
+      state.lastFatigueMsg = msg;
+      state.lastFatigueShownAt = now;
+      els.fatigueMsg.textContent = msg;
+    }
   }
 
   window.handleAction = (actionType) => {
@@ -794,9 +906,11 @@
       else state.fatigue[key] = 0;
     }
 
+    updateStreak(actionType);
+
     const impact = IMPACTS[actionType][event.type];
-    const actualSat = impact[0] * multiplier;
-    const actualStress = impact[1] * multiplier;
+    const actualSat = impact[0] * multiplier * state.mode.impactMul;
+    const actualStress = impact[1] * multiplier * state.mode.impactMul;
 
     state.satisfaction = Math.min(100, Math.max(0, state.satisfaction + actualSat));
     state.stress = Math.min(100, Math.max(0, state.stress + actualStress));
@@ -817,10 +931,11 @@
   };
 
   function updateUI() {
+    // 結束條件：狀態達界（不是失敗）
     if ((state.satisfaction <= 0 || state.stress >= 100) && state.isPlaying) {
       state.satisfaction = Math.max(0, state.satisfaction);
       state.stress = Math.min(100, state.stress);
-      endGame();
+      endGame(state.satisfaction <= 0 ? "sat" : "stress");
       return;
     }
 
@@ -841,14 +956,13 @@
     else document.body.classList.remove('shake-hard');
   }
 
-  function endGame() {
+  function endGame(reason = "time") {
     state.isPlaying = false;
-    clearInterval(state.timerInterval);
-    clearInterval(state.spawnerInterval);
-    clearInterval(state.neglectInterval);
+    stopAllTimers();
     document.body.classList.remove('shake-hard');
 
-    els.eventArea.querySelectorAll('.event-card').forEach(n => n.remove());
+    // 清空事件卡避免殘留
+    clearEventsDom();
 
     document.getElementById('game-screen').classList.add('hidden');
     els.result.wrap.classList.remove('hidden');
@@ -857,9 +971,10 @@
     const finalStress = Math.floor(state.stress);
     const resolve = state.resolveCount;
 
+    // 快手高分：不會負分
     const base = resolve * 100;
     const bonus = finalSat * 5;
-    const mult = 1 + ((100 - finalStress) / 200); // 1.0 ~ 1.5
+    const mult = 1 + ((100 - finalStress) / 200);
     const totalScore = Math.floor((base + bonus) * mult);
 
     state.finalScore = totalScore;
@@ -875,12 +990,28 @@
     els.result.r1.textContent = remark.r1;
     els.result.r2.textContent = remark.r2;
 
+    // 狀態解釋：把結束從「你輸了」轉成「狀態達界」
+    const labels = { soothe: "安撫", explain: "說明", act: "行動" };
+    const streakInfo = state.streak.best ? `你在高壓時傾向連續使用「${labels[state.streak.best]}」` : "";
+    const streakTail = (state.streak.bestLen >= 3) ? `，連續最長 ${state.streak.bestLen} 次` : "";
+
+    let reasonText = "時間到，狀態收束";
+    if (reason === "sat") reasonText = "滿意度歸零，現場需求已超出單人可承載";
+    if (reason === "stress") reasonText = "情緒壓力爆表，決策開始失真";
+    if (reason === "time") reasonText = "時間到，狀態收束";
+
+    let note = `狀態達界原因：${reasonText}`;
+    if (streakInfo) note += `｜${streakInfo}${streakTail}`;
+    note += "｜這不是能力好壞，而是資源與壓力的真實消耗";
+
+    els.result.note.textContent = note;
+
     setTimeout(() => {
       document.querySelectorAll('.fade-in-text').forEach(el => el.classList.add('visible'));
     }, 120);
 
+    // 模式差異：新手不比賽
     if (state.mode.online) {
-      els.result.note.textContent = "專家模式：可登記到統一榜";
       els.lb.wrap.classList.remove('hidden');
       els.lb.name.value = '';
       els.lb.btnSave.disabled = false;
@@ -901,7 +1032,6 @@
       })();
 
     } else {
-      els.result.note.textContent = "新手模式：單機計分，不比賽";
       els.lb.wrap.classList.add('hidden');
     }
   }
@@ -911,6 +1041,10 @@
    *********************/
   window.saveScoreOnline = async () => {
     if (!state.mode.online) return;
+    if (!isConfigReady()) {
+      alert("Firebase 尚未設定。");
+      return;
+    }
 
     els.lb.btnSave.disabled = true;
     els.lb.btnSave.textContent = "送出中…";
@@ -951,6 +1085,7 @@
 
   window.refreshLeaderboard = async (force = false) => {
     if (!state.mode.online) return;
+    if (!isConfigReady()) return;
 
     const now = Date.now();
     if (!force && now - state.lastLbFetchAt < 4500) return;
@@ -1019,16 +1154,13 @@
     }[c]));
   }
 
-  function updateButtonsState(hasSelection) {
-    Object.values(els.btns).forEach(btn => {
-      btn.disabled = !hasSelection;
-      if (!hasSelection) btn.classList.add('opacity-50', 'cursor-not-allowed');
-      else btn.classList.remove('opacity-50', 'cursor-not-allowed');
-    });
-  }
+  // Init
+  resetToInitState();
 
-  updateButtonsState(false);
-  updateFatigueUI(true);
+  // 若有人用瀏覽器特殊快取回來，也強制回到 init
+  window.addEventListener('pageshow', (e) => {
+    if (e.persisted) backToStart();
+  });
 </script>
 
 </body>
