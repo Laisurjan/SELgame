@@ -2,8 +2,8 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>職場服務大挑戰 - 單機/統一榜雙模式</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>職場服務大挑戰 - 空服員 SEL 壓力測試</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     :root { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
@@ -37,8 +37,9 @@
       cursor: pointer;
       transition: all 0.18s;
       box-shadow: 0 10px 16px -3px rgba(0,0,0,0.14), 0 4px 8px -2px rgba(0,0,0,0.08);
-      max-width: 340px;
+      max-width: 360px;
       z-index: 10;
+      touch-action: manipulation;
     }
     .event-card.selected {
       z-index: 50 !important;
@@ -99,23 +100,32 @@
 
 <body class="bg-slate-900 text-white min-h-screen flex flex-col">
 
-  <!-- Start -->
+  <!-- Start Screen -->
   <div id="start-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-900 p-6">
     <h1 class="text-5xl sm:text-6xl font-black text-yellow-400 mb-3 tracking-wider text-center">職場服務大挑戰</h1>
-    <h2 class="text-2xl sm:text-3xl text-white mb-6 text-center">空服員 60 秒壓力測試</h2>
+    <h2 class="text-2xl sm:text-3xl text-white mb-5 text-center">空服員 60 秒壓力測試</h2>
 
-    <div class="bg-slate-800 p-6 sm:p-8 rounded-2xl shadow-2xl text-center border border-slate-700 max-w-2xl w-full">
+    <div class="bg-slate-800 p-6 sm:p-8 rounded-2xl shadow-2xl text-center border border-slate-700 max-w-3xl w-full">
+      <!-- 說明順序（你指定的邏輯） -->
+      <div class="text-left text-slate-100 mb-4 leading-relaxed">
+        <div class="text-lg sm:text-xl font-black mb-2">你是空服員</div>
+        <div class="text-sm sm:text-base text-slate-200">
+          你要在時間壓力下處理顧客問題，並同時顧到「情緒」與「滿意度」。
+          你不是在比對錯，而是在比「能不能穩住現場」。
+        </div>
+      </div>
+
       <div class="flex flex-wrap justify-center gap-2 mb-4">
         <span class="pill">時間</span>
-        <span class="pill">滿意度</span>
+        <span class="pill">顧客滿意度</span>
         <span class="pill">情緒壓力</span>
         <span class="pill">按錯或不按會結束</span>
       </div>
 
-      <p class="text-gray-300 mb-6 text-base sm:text-lg leading-relaxed">
-        事件卡片會不斷出現<br />
-        先點選一張卡片，再按下方按鈕處理
-      </p>
+      <div class="text-sm sm:text-base text-slate-200 leading-relaxed mb-5">
+        事件卡片會不斷出現。<br/>
+        <span class="font-black text-white">先點選一張卡片</span>，再按下方按鈕處理：<span class="font-black text-green-300">安撫</span>／<span class="font-black text-yellow-300">說明</span>／<span class="font-black text-red-300">行動</span>。
+      </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <button onclick="beginPrestart('newbie')"
@@ -130,8 +140,10 @@
 
       <div id="start-note" class="mt-5 text-sm text-slate-300 opacity-90 leading-relaxed">
         新手模式：單機計分，不比賽<br/>
-        專家模式：統一榜計分，需要網路
+        專家模式：統一榜計分（需網路）
       </div>
+
+      <div id="start-status" class="mt-3 text-xs text-slate-400"></div>
     </div>
   </div>
 
@@ -141,7 +153,7 @@
     <div id="prestart-num" class="text-8xl sm:text-9xl font-black text-yellow-300 tabular-nums">10</div>
   </div>
 
-  <!-- Game -->
+  <!-- Game Screen -->
   <div id="game-screen" class="hidden flex-col w-full max-w-7xl mx-auto p-3 sm:p-4 app-dvh">
     <!-- Dashboard -->
     <div class="bg-slate-800/50 rounded-xl border border-slate-700 dash-card mb-3 sm:mb-4">
@@ -180,7 +192,7 @@
       </div>
     </div>
 
-    <!-- Sticky controls -->
+    <!-- Sticky Controls -->
     <div class="mobile-sticky pt-2">
       <div id="fatigue-msg" class="text-center text-orange-300 mb-2"></div>
 
@@ -209,7 +221,7 @@
     </div>
   </div>
 
-  <!-- Result -->
+  <!-- Result Screen -->
   <div id="result-screen" class="hidden fixed inset-0 z-50 bg-black flex flex-col items-center justify-center p-6 sm:p-8 overflow-y-auto">
     <h2 class="text-4xl sm:text-5xl font-black text-red-500 mb-8 tracking-widest border-b-4 border-red-500 pb-2">挑戰結束</h2>
 
@@ -218,13 +230,14 @@
       <p id="final-remark-2" class="text-xl sm:text-2xl text-white font-light fade-in-text"></p>
     </div>
 
-    <div class="flex flex-col sm:flex-row gap-6 sm:gap-8 mb-8 w-full max-w-4xl">
+    <div class="flex flex-col sm:flex-row gap-6 sm:gap-8 mb-6 w-full max-w-4xl">
       <div class="flex-1 bg-gray-900 p-6 rounded-xl border border-gray-800 text-center">
         <div class="text-gray-400 text-sm uppercase">總分</div>
         <div id="final-score" class="text-6xl font-black text-yellow-400">0</div>
         <div id="final-mult" class="text-sm text-gray-400 mt-2"></div>
         <div id="final-note" class="text-xs text-slate-400 mt-2"></div>
       </div>
+
       <div class="flex-1 bg-gray-900 p-6 rounded-xl border border-gray-800 text-center space-y-2">
         <div class="flex justify-between border-b border-gray-800 pb-2">
           <span class="text-gray-400">顧客滿意度</span>
@@ -241,10 +254,10 @@
       </div>
     </div>
 
-    <!-- Leaderboard (expert only) -->
-    <div id="leaderboard-wrap" class="hidden w-full max-w-3xl bg-gray-900 rounded-xl p-6 border border-gray-700 mb-8">
+    <!-- Leaderboard -->
+    <div id="leaderboard-wrap" class="hidden w-full max-w-4xl bg-gray-900 rounded-xl p-6 border border-gray-700 mb-6">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-        <h3 class="text-xl text-yellow-400 font-bold">統一榜</h3>
+        <h3 class="text-xl text-yellow-400 font-black">統一榜（精修版）</h3>
         <div class="flex items-center gap-2">
           <button id="btn-refresh" class="text-xs text-slate-300 hover:text-white underline" onclick="refreshLeaderboard(true)">刷新</button>
           <span id="lb-status" class="text-xs text-slate-400"></span>
@@ -253,7 +266,8 @@
 
       <div class="flex gap-2 mb-4">
         <input type="text" id="player-name" placeholder="輸入暱稱"
-               class="flex-1 bg-gray-800 text-white px-4 py-2 rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500" maxlength="10" />
+               class="flex-1 bg-gray-800 text-white px-4 py-2 rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500"
+               maxlength="10" />
         <button id="btn-save" onclick="saveScoreOnline()"
                 class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-lg font-black">
           登記
@@ -262,7 +276,7 @@
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
-          <div class="text-sm text-slate-300 mb-2 font-bold">Top 20</div>
+          <div class="text-sm text-slate-300 mb-2 font-black">Top 50（同分可並列）</div>
           <div class="overflow-x-auto">
             <table class="w-full text-left">
               <thead>
@@ -273,13 +287,13 @@
                   <th class="pb-2 text-right">壓力</th>
                 </tr>
               </thead>
-              <tbody id="top20-body"></tbody>
+              <tbody id="top50-body"></tbody>
             </table>
           </div>
         </div>
 
         <div>
-          <div class="text-sm text-slate-300 mb-2 font-bold">最新 10 筆</div>
+          <div class="text-sm text-slate-300 mb-2 font-black">最新 20 筆</div>
           <div class="overflow-x-auto">
             <table class="w-full text-left">
               <thead>
@@ -289,38 +303,41 @@
                   <th class="pb-2 text-right">分數</th>
                 </tr>
               </thead>
-              <tbody id="latest10-body"></tbody>
+              <tbody id="latest20-body"></tbody>
             </table>
           </div>
         </div>
       </div>
 
       <div class="mt-4 text-xs text-slate-400">
-        為了穩定，排行榜不做每秒自動刷新，可手動刷新或每 8 秒自動一次
+        為了穩定：榜單不做每秒即時刷新；可手動刷新或每 8 秒自動更新一次。
       </div>
     </div>
 
     <div class="flex flex-col sm:flex-row gap-3">
-      <button onclick="backToStart()" class="text-gray-400 hover:text-white border border-gray-600 hover:border-white px-8 py-3 rounded-full transition">
-        回到主畫面再玩一次
+      <button onclick="restartSameMode()"
+              class="text-white bg-slate-700 hover:bg-slate-600 px-8 py-3 rounded-full font-black transition">
+        再玩一次
       </button>
-      <button onclick="location.reload()" class="text-gray-400 hover:text-white border border-gray-600 hover:border-white px-8 py-3 rounded-full transition">
-        下一位挑戰者
+      <button onclick="backToHome()"
+              class="text-gray-200 hover:text-white border border-gray-600 hover:border-white px-8 py-3 rounded-full transition font-black">
+        回主畫面
       </button>
     </div>
   </div>
 
 <script type="module">
   /*********************
-   *  Firebase（只在專家模式用）
+   * Firebase（只用 v10 模組版，不混用 compat）
    *********************/
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
   import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
   import {
-    getDatabase, ref, push, serverTimestamp, set,
+    getDatabase, ref, push, set, serverTimestamp,
     query, orderByChild, limitToLast, get
   } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 
+  // ✅ 直接用你提供的真實設定（不用再貼第二份）
   const FIREBASE_CONFIG = {
     apiKey: "AIzaSyD6y-tPy0grqmZAUTLRKGbp5RxdmK1t7pA",
     authDomain: "selmode.firebaseapp.com",
@@ -330,20 +347,15 @@
   };
 
   let fb = {
+    ready: false,
     app: null,
     auth: null,
     db: null,
-    user: null,
-    ready: false
+    user: null
   };
 
-  function isConfigReady() {
-    return !!(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.databaseURL && FIREBASE_CONFIG.projectId && FIREBASE_CONFIG.appId);
-  }
-
-  async function initFirebaseIfNeeded() {
+  async function initFirebase() {
     if (fb.ready) return true;
-    if (!isConfigReady()) return false;
     try {
       fb.app = initializeApp(FIREBASE_CONFIG);
       fb.auth = getAuth(fb.app);
@@ -360,7 +372,7 @@
   }
 
   /*********************
-   *  遊戲設定
+   * 遊戲設定
    *********************/
   const GAME_DURATION = 60;
 
@@ -388,6 +400,7 @@
   ];
   const EVENT_BY_ID = Object.fromEntries(EVENTS.map(e => [e.id, e]));
 
+  // Action -> EventType : [Satisfaction Δ, Stress Δ]
   const IMPACTS = {
     soothe:  { soothe: [ 14, -10], explain: [  6,  -6], act: [  4,   0] },
     explain: { soothe: [ -6,   6], explain: [ 11,  -6], act: [  1,   4] },
@@ -416,15 +429,12 @@
   };
 
   const MODES = {
-    // 新手：更不容易在 60 秒前被狀態達界，但規則不變，只是代價更溫和
-    newbie: { name: '新手模式', spawnMul: 2.2, maxEvents: 4, fatigueMin: 0.4, online: false,
-              neglectSatMul: 0.65, neglectStressMul: 0.70, impactMul: 0.90 },
-    expert: { name: '專家模式', spawnMul: 1.0, maxEvents: 6, fatigueMin: 0.2, online: true,
-              neglectSatMul: 1.00, neglectStressMul: 1.00, impactMul: 1.00 }
+    newbie: { name: '新手模式', spawnMul: 2.2, maxEvents: 4, fatigueMin: 0.4, online: false },
+    expert: { name: '專家模式', spawnMul: 1.0, maxEvents: 6, fatigueMin: 0.2, online: true }
   };
 
   /*********************
-   *  狀態 & DOM
+   * 狀態 & DOM
    *********************/
   let state = {
     modeKey: 'expert',
@@ -436,6 +446,8 @@
     resolveCount: 0,
     activeEvents: [],
     selectedEventId: null,
+
+    // 疲勞：只看「短暫連續」—連續用同一種才累，換別種就 reset（你要的）
     fatigue: { soothe: 0, explain: 0, act: 0 },
 
     isPlaying: false,
@@ -450,19 +462,16 @@
     lastLbFetchAt: 0,
     lbAutoTimer: null,
 
-    // prestart control
-    prestartTimerId: null,
-    prestartActive: false,
-
-    // fatigue message throttling
-    lastFatigueMsg: "",
-    lastFatigueShownAt: 0,
-
-    // streak tracking for end-note
-    streak: { cur: null, curLen: 0, best: null, bestLen: 0 }
+    // 疲勞提示節流：避免一直刷同一句
+    fatigueLastMsg: "",
+    fatigueMsgAt: 0
   };
 
   const els = {
+    start: {
+      wrap: document.getElementById('start-screen'),
+      status: document.getElementById('start-status')
+    },
     timer: document.getElementById('timer'),
     stressBar: document.getElementById('stress-bar'),
     stressVal: document.getElementById('stress-val'),
@@ -471,6 +480,7 @@
     eventArea: document.getElementById('event-area'),
     emptyMsg: document.getElementById('empty-msg'),
     fatigueMsg: document.getElementById('fatigue-msg'),
+    modeBadge: document.getElementById('mode-badge'),
 
     meta: {
       soothe: document.getElementById('meta-soothe'),
@@ -494,8 +504,6 @@
       num: document.getElementById('prestart-num')
     },
 
-    modeBadge: document.getElementById('mode-badge'),
-
     result: {
       wrap: document.getElementById('result-screen'),
       score: document.getElementById('final-score'),
@@ -512,9 +520,10 @@
       wrap: document.getElementById('leaderboard-wrap'),
       status: document.getElementById('lb-status'),
       btnSave: document.getElementById('btn-save'),
+      btnRefresh: document.getElementById('btn-refresh'),
       name: document.getElementById('player-name'),
-      top20: document.getElementById('top20-body'),
-      latest10: document.getElementById('latest10-body')
+      top50: document.getElementById('top50-body'),
+      latest20: document.getElementById('latest20-body')
     }
   };
 
@@ -525,149 +534,111 @@
     const ss = String(d.getSeconds()).padStart(2,'0');
     return `${hh}:${mm}:${ss}`;
   };
-
-  function randInt(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
-
-  function stopAllTimers() {
-    clearInterval(state.timerInterval);
-    clearInterval(state.spawnerInterval);
-    clearInterval(state.neglectInterval);
-    clearInterval(state.lbAutoTimer);
-    state.timerInterval = null;
-    state.spawnerInterval = null;
-    state.neglectInterval = null;
-    state.lbAutoTimer = null;
-
-    if (state.prestartTimerId) {
-      clearTimeout(state.prestartTimerId);
-      state.prestartTimerId = null;
-    }
-    state.prestartActive = false;
-  }
-
-  function clearEventsDom() {
-    els.eventArea.querySelectorAll('.event-card').forEach(n => n.remove());
-    els.emptyMsg.classList.remove('hidden');
-  }
-
-  function clearResultFade() {
-    document.querySelectorAll('.fade-in-text').forEach(el => el.classList.remove('visible'));
-  }
-
-  function resetToInitState() {
-    stopAllTimers();
-    state.isPlaying = false;
-
-    state.time = GAME_DURATION;
-    state.satisfaction = 70;
-    state.stress = 20;
-    state.resolveCount = 0;
-    state.activeEvents = [];
-    state.selectedEventId = null;
-    state.fatigue = { soothe: 0, explain: 0, act: 0 };
-    state.currentSpawnMs = null;
-
-    state.finalScore = 0;
-    state.finalMult = 1.0;
-
-    state.lastFatigueMsg = "";
-    state.lastFatigueShownAt = 0;
-
-    state.streak = { cur: null, curLen: 0, best: null, bestLen: 0 };
-
-    document.body.classList.remove('shake-hard');
-    clearEventsDom();
-    clearResultFade();
-
-    updateButtonsState(false);
-    updateUI();
-    updateFatigueUI(true);
-  }
-
-  window.backToStart = () => {
-    resetToInitState();
-    els.pre.wrap.classList.add('hidden');
-    document.getElementById('game-screen').classList.add('hidden');
-    els.result.wrap.classList.add('hidden');
-    document.getElementById('start-screen').classList.remove('hidden');
-  };
+  const randInt = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
 
   /*********************
-   *  開始前教學（含四項）
+   * Start：先初始化 Firebase（讓你一開始就知道可不可用）
    *********************/
-  window.beginPrestart = (modeKey) => {
-    // 強制回到乾淨狀態，確保可重玩
-    resetToInitState();
+  (async () => {
+    const ok = await initFirebase();
+    els.start.status.textContent = ok ? "Firebase：已連線（專家模式可用）" : "Firebase：連線失敗（專家模式暫不可用）";
+  })();
 
+  /*********************
+   * 開始前教學（四項規則，10 秒）
+   *********************/
+  window.beginPrestart = async (modeKey) => {
     state.modeKey = modeKey;
     state.mode = MODES[modeKey];
 
-    document.getElementById('start-screen').classList.add('hidden');
-    els.result.wrap.classList.add('hidden');
-    document.getElementById('game-screen').classList.add('hidden');
+    // 專家模式：先確認 Firebase OK（避免結束才發現不能登記）
+    if (state.mode.online) {
+      els.start.status.textContent = "Firebase：檢查中…";
+      const ok = await initFirebase();
+      els.start.status.textContent = ok ? "Firebase：已連線（專家模式可用）" : "Firebase：連線失敗（專家模式暫不可用）";
+      if (!ok) {
+        alert("專家模式需要網路與 Firebase 連線。請確認 Firebase 規則與網路後再試一次。");
+        return;
+      }
+    }
 
+    els.start.wrap.classList.add('hidden');
     els.pre.wrap.classList.remove('hidden');
-    state.prestartActive = true;
 
     let t = 10;
     const tips = [
       "先點選事件卡片，再按下方按鈕處理",
-      "顧客滿意度會下降，放著不處理會更快下降",
-      "情緒壓力會上升，按錯或放著不處理都會升",
-      "任一項達界就結束，滿意度歸零或壓力爆表"
+      "顧客滿意度會下降：放著不處理會更快下降",
+      "情緒壓力會上升：按錯或放著不處理都會升",
+      "任一項爆掉就結束：滿意度歸零或壓力爆表"
     ];
 
     const tick = () => {
-      if (!state.prestartActive) return;
-
       els.pre.num.textContent = t;
-
       let idx = 0;
       if (t <= 9 && t >= 8) idx = 0;
       else if (t <= 7 && t >= 6) idx = 1;
       else if (t <= 5 && t >= 4) idx = 2;
       else idx = 3;
-
       els.pre.tip.textContent = tips[idx];
 
       t--;
       if (t < 0) {
-        state.prestartActive = false;
         els.pre.wrap.classList.add('hidden');
         startGame();
         return;
       }
-      state.prestartTimerId = setTimeout(tick, 1000);
+      setTimeout(tick, 1000);
     };
-
     tick();
   };
 
   /*********************
-   *  遊戲主流程
+   * 遊戲主流程
    *********************/
-  function startGame() {
-    // 進入遊戲前，再確保一次乾淨畫面（但保留 mode）
-    stopAllTimers();
-    clearEventsDom();
-    clearResultFade();
-
+  function resetStateForGame() {
     state.time = GAME_DURATION;
     state.satisfaction = 70;
     state.stress = 20;
     state.resolveCount = 0;
     state.activeEvents = [];
     state.selectedEventId = null;
+
     state.fatigue = { soothe: 0, explain: 0, act: 0 };
+    state.fatigueLastMsg = "";
+    state.fatigueMsgAt = 0;
+
+    state.isPlaying = false;
     state.currentSpawnMs = null;
-    state.isPlaying = true;
 
-    state.streak = { cur: null, curLen: 0, best: null, bestLen: 0 };
+    clearInterval(state.timerInterval);
+    clearInterval(state.spawnerInterval);
+    clearInterval(state.neglectInterval);
+    clearInterval(state.lbAutoTimer);
 
-    document.getElementById('game-screen').classList.remove('hidden');
-    document.getElementById('game-screen').classList.add('flex');
+    els.eventArea.querySelectorAll('.event-card').forEach(n => n.remove());
+    els.emptyMsg.classList.remove('hidden');
+  }
+
+  function showScreen(name) {
+    const start = document.getElementById('start-screen');
+    const game = document.getElementById('game-screen');
+    const result = document.getElementById('result-screen');
+    start.classList.add('hidden');
+    game.classList.add('hidden');
+    result.classList.add('hidden');
+
+    if (name === 'start') start.classList.remove('hidden');
+    if (name === 'game') { game.classList.remove('hidden'); game.classList.add('flex'); }
+    if (name === 'result') result.classList.remove('hidden');
+  }
+
+  function startGame() {
+    resetStateForGame();
+    showScreen('game');
 
     els.modeBadge.textContent = `${state.mode.name}｜事件上限 ${state.mode.maxEvents}｜疲勞最低 ${Math.round(state.mode.fatigueMin*100)}%`;
+    state.isPlaying = true;
 
     updateButtonsState(false);
     updateUI();
@@ -678,19 +649,17 @@
       state.time--;
       updateUI();
       updateDifficulty();
-      if (state.time <= 0) endGame("time");
+      if (state.time <= 0) endGame();
     }, 1000);
 
     // Spawner initial
     setSpawner(Math.round(2200 * state.mode.spawnMul));
 
-    // Neglect penalty：新手更溫和，但規則不變
+    // Neglect penalty（不按就掉滿意度、升壓力）
     state.neglectInterval = setInterval(() => {
-      if (!state.isPlaying) return;
-
       if (state.activeEvents.length > 0) {
-        const satPenalty = state.activeEvents.length * 2.0 * state.mode.neglectSatMul;
-        const stressPenalty = state.activeEvents.length * 1.0 * state.mode.neglectStressMul;
+        const satPenalty = state.activeEvents.length * 2.0;
+        const stressPenalty = state.activeEvents.length * 1.0;
 
         state.satisfaction = Math.max(0, state.satisfaction - satPenalty);
         state.stress = Math.min(100, state.stress + stressPenalty);
@@ -703,12 +672,11 @@
     }, 1000);
   }
 
+  // 難度曲線：前 10 秒就有感，逐漸提高，後 20 秒暴走
   function updateDifficulty() {
     if (!state.isPlaying) return;
-
     const elapsed = GAME_DURATION - state.time;
     let base;
-
     if (elapsed < 10) base = 1900;
     else if (elapsed < 20) base = 1500;
     else if (elapsed < 30) base = 1150;
@@ -833,6 +801,7 @@
     });
   }
 
+  // 疲勞倍率：短暫連續才累（換別種會 reset）
   function getMultiplier(counts) {
     if (counts === 0) return 1.0;
     if (counts === 1) return 0.7;
@@ -840,18 +809,7 @@
     return state.mode.fatigueMin;
   }
 
-  function updateStreak(actionType) {
-    if (state.streak.cur === actionType) state.streak.curLen++;
-    else {
-      state.streak.cur = actionType;
-      state.streak.curLen = 1;
-    }
-    if (state.streak.curLen > state.streak.bestLen) {
-      state.streak.bestLen = state.streak.curLen;
-      state.streak.best = actionType;
-    }
-  }
-
+  // ✅ 疲勞提示「人性化」，並且節流避免一直刷
   function updateFatigueUI(force = false) {
     const labels = { soothe: '安撫', explain: '說明', act: '行動' };
 
@@ -863,31 +821,35 @@
       els.meta[key].textContent = `效果 ${pct}%`;
     }
 
-    // 重要：疲勞提示改為「連續 ≥2 才提醒」，避免碎念與誤判成總量懲罰
+    const now = Date.now();
     const worst = ['soothe','explain','act'].sort((a,b)=>state.fatigue[b]-state.fatigue[a])[0];
     const wCount = state.fatigue[worst];
     const wPct = Math.round(getMultiplier(wCount) * 100);
 
-    let msg = "輪替使用三種做法，影響力最穩定";
-    if (wCount >= 2) {
+    // 只有真的疲勞（倍率 < 100%）才提醒
+    if (wCount >= 1) {
       const hint =
         worst === 'act'
-          ? "先接住情緒，再做處置"
+          ? "提醒：先接住情緒，再做處置"
           : worst === 'explain'
-            ? "先共感，再說明"
-            : "也需要說明或行動來收斂狀態";
-      msg = `你開始連續用同一種做法，影響力下降到 ${wPct}%　${hint}`;
-      if (wCount >= 3) {
-        msg = `你連續用「${labels[worst]}」已經變成習慣，影響力剩 ${wPct}%　${hint}`;
-      }
-    }
+            ? "提醒：先共感，再說明"
+            : "提醒：必要時也要說明或行動";
+      const msg = `連續使用「${labels[worst]}」效果剩 ${wPct}%　${hint}`;
 
-    const now = Date.now();
-    const shouldUpdate = force || (msg !== state.lastFatigueMsg && (now - state.lastFatigueShownAt > 600));
-    if (shouldUpdate) {
-      state.lastFatigueMsg = msg;
-      state.lastFatigueShownAt = now;
-      els.fatigueMsg.textContent = msg;
+      // 節流：2 秒內同一句不重複刷
+      if (force || msg !== state.fatigueLastMsg || (now - state.fatigueMsgAt) > 2000) {
+        els.fatigueMsg.textContent = msg;
+        state.fatigueLastMsg = msg;
+        state.fatigueMsgAt = now;
+      }
+    } else {
+      // 不疲勞時給一句很短的策略提醒（不刷屏）
+      const msg = "輪替使用三種做法，效果最好";
+      if (force || msg !== state.fatigueLastMsg) {
+        els.fatigueMsg.textContent = msg;
+        state.fatigueLastMsg = msg;
+        state.fatigueMsgAt = now;
+      }
     }
   }
 
@@ -898,6 +860,7 @@
     if (evIndex === -1) return;
     const event = state.activeEvents[evIndex];
 
+    // 疲勞：只看「短暫連續」
     const counts = state.fatigue[actionType];
     const multiplier = getMultiplier(counts);
 
@@ -906,11 +869,10 @@
       else state.fatigue[key] = 0;
     }
 
-    updateStreak(actionType);
-
+    // 按錯會變差（滿意度下降/壓力上升），但「總分不會負」
     const impact = IMPACTS[actionType][event.type];
-    const actualSat = impact[0] * multiplier * state.mode.impactMul;
-    const actualStress = impact[1] * multiplier * state.mode.impactMul;
+    const actualSat = impact[0] * multiplier;
+    const actualStress = impact[1] * multiplier;
 
     state.satisfaction = Math.min(100, Math.max(0, state.satisfaction + actualSat));
     state.stress = Math.min(100, Math.max(0, state.stress + actualStress));
@@ -925,17 +887,17 @@
     maybeTriggerChain(event, 'onResolve');
 
     updateUI();
-    updateFatigueUI();
+    updateFatigueUI(false);
 
     if (state.activeEvents.length === 0) els.emptyMsg.classList.remove('hidden');
   };
 
   function updateUI() {
-    // 結束條件：狀態達界（不是失敗）
+    // 結束條件：滿意度歸零或壓力爆表
     if ((state.satisfaction <= 0 || state.stress >= 100) && state.isPlaying) {
       state.satisfaction = Math.max(0, state.satisfaction);
       state.stress = Math.min(100, state.stress);
-      endGame(state.satisfaction <= 0 ? "sat" : "stress");
+      endGame();
       return;
     }
 
@@ -956,26 +918,27 @@
     else document.body.classList.remove('shake-hard');
   }
 
-  function endGame(reason = "time") {
+  function endGame() {
     state.isPlaying = false;
-    stopAllTimers();
+    clearInterval(state.timerInterval);
+    clearInterval(state.spawnerInterval);
+    clearInterval(state.neglectInterval);
     document.body.classList.remove('shake-hard');
 
     // 清空事件卡避免殘留
-    clearEventsDom();
+    els.eventArea.querySelectorAll('.event-card').forEach(n => n.remove());
 
-    document.getElementById('game-screen').classList.add('hidden');
-    els.result.wrap.classList.remove('hidden');
+    showScreen('result');
 
     const finalSat = Math.floor(state.satisfaction);
     const finalStress = Math.floor(state.stress);
     const resolve = state.resolveCount;
 
-    // 快手高分：不會負分
+    // ✅ 你要的：不會負分、快手高分
     const base = resolve * 100;
     const bonus = finalSat * 5;
-    const mult = 1 + ((100 - finalStress) / 200);
-    const totalScore = Math.floor((base + bonus) * mult);
+    const mult = 1 + ((100 - finalStress) / 200); // 1.0 ~ 1.5
+    const totalScore = Math.max(0, Math.floor((base + bonus) * mult));
 
     state.finalScore = totalScore;
     state.finalMult = mult;
@@ -990,161 +953,154 @@
     els.result.r1.textContent = remark.r1;
     els.result.r2.textContent = remark.r2;
 
-    // 狀態解釋：把結束從「你輸了」轉成「狀態達界」
-    const labels = { soothe: "安撫", explain: "說明", act: "行動" };
-    const streakInfo = state.streak.best ? `你在高壓時傾向連續使用「${labels[state.streak.best]}」` : "";
-    const streakTail = (state.streak.bestLen >= 3) ? `，連續最長 ${state.streak.bestLen} 次` : "";
-
-    let reasonText = "時間到，狀態收束";
-    if (reason === "sat") reasonText = "滿意度歸零，現場需求已超出單人可承載";
-    if (reason === "stress") reasonText = "情緒壓力爆表，決策開始失真";
-    if (reason === "time") reasonText = "時間到，狀態收束";
-
-    let note = `狀態達界原因：${reasonText}`;
-    if (streakInfo) note += `｜${streakInfo}${streakTail}`;
-    note += "｜這不是能力好壞，而是資源與壓力的真實消耗";
-
-    els.result.note.textContent = note;
-
+    // 淡入
     setTimeout(() => {
       document.querySelectorAll('.fade-in-text').forEach(el => el.classList.add('visible'));
     }, 120);
 
-    // 模式差異：新手不比賽
+    // 模式差異：新手不顯示統一榜
     if (state.mode.online) {
+      els.result.note.textContent = "專家模式：可登記到統一榜";
       els.lb.wrap.classList.remove('hidden');
       els.lb.name.value = '';
       els.lb.btnSave.disabled = false;
       els.lb.btnSave.textContent = "登記";
-      els.lb.status.textContent = isConfigReady() ? "" : "Firebase 未設定";
+      els.lb.status.textContent = "已連線";
 
-      (async () => {
-        const ok = await initFirebaseIfNeeded();
-        if (!ok) {
-          els.lb.status.textContent = "Firebase 初始化失敗";
-          els.lb.btnSave.disabled = true;
-          return;
-        }
-        els.lb.status.textContent = "已連線";
-        await refreshLeaderboard(true);
-        clearInterval(state.lbAutoTimer);
-        state.lbAutoTimer = setInterval(() => refreshLeaderboard(false), 8000);
-      })();
+      // 拉一次榜 + 每 8 秒刷新（節流）
+      refreshLeaderboard(true);
+      clearInterval(state.lbAutoTimer);
+      state.lbAutoTimer = setInterval(() => refreshLeaderboard(false), 8000);
 
     } else {
+      els.result.note.textContent = "新手模式：單機計分，不比賽";
       els.lb.wrap.classList.add('hidden');
     }
   }
 
   /*********************
-   *  統一榜：寫入/讀取（專家模式）
+   * 統一榜（精修）
+   * - 允許同分、允許重複暱稱
+   * - 讀取 Top50（score）與 Latest20（createdAt）
+   * - 寫入成功後立即刷新
    *********************/
   window.saveScoreOnline = async () => {
     if (!state.mode.online) return;
-    if (!isConfigReady()) {
-      alert("Firebase 尚未設定。");
-      return;
-    }
 
     els.lb.btnSave.disabled = true;
     els.lb.btnSave.textContent = "送出中…";
+    els.lb.status.textContent = "寫入中…";
 
     const nameRaw = (els.lb.name.value || "").trim();
     const name = nameRaw ? nameRaw.slice(0, 10) : `Player${Math.floor(Math.random()*999)}`;
 
     const payload = {
       name,
-      score: state.finalScore,
-      stress: Math.floor(state.stress),
-      satisfaction: Math.floor(state.satisfaction),
-      resolve: state.resolveCount,
+      score: Number(state.finalScore),
+      stress: Number(Math.floor(state.stress)),
+      satisfaction: Number(Math.floor(state.satisfaction)),
+      resolve: Number(state.resolveCount),
       mult: Number(state.finalMult.toFixed(2)),
       createdAt: Date.now(),
       serverTime: serverTimestamp()
     };
 
     try {
-      const ok = await initFirebaseIfNeeded();
+      const ok = await initFirebase();
       if (!ok) throw new Error("Firebase init failed");
 
+      // ✅ push 產生唯一 key：同分同名都能進
       const listRef = ref(fb.db, "scores");
       const newRef = push(listRef);
       await set(newRef, payload);
 
       els.lb.btnSave.textContent = "已登記";
-      els.lb.status.textContent = "登記成功";
+      els.lb.status.textContent = "登記成功，刷新榜單…";
+
       await refreshLeaderboard(true);
 
     } catch (e) {
-      console.error(e);
+      console.error("saveScoreOnline error:", e);
       els.lb.btnSave.disabled = false;
       els.lb.btnSave.textContent = "重送";
-      els.lb.status.textContent = "送出失敗，可重送";
+      els.lb.status.textContent = "登記失敗（可能是 Rules / 網路）";
+      alert("登記失敗。\n請到 Firebase Realtime Database → 規則（Rules）確認 .write 允許 auth != null 或 true。");
     }
   };
 
   window.refreshLeaderboard = async (force = false) => {
     if (!state.mode.online) return;
-    if (!isConfigReady()) return;
 
     const now = Date.now();
-    if (!force && now - state.lastLbFetchAt < 4500) return;
+    if (!force && now - state.lastLbFetchAt < 4500) return; // 節流
     state.lastLbFetchAt = now;
 
     els.lb.status.textContent = "更新中…";
 
     try {
-      const ok = await initFirebaseIfNeeded();
+      const ok = await initFirebase();
       if (!ok) throw new Error("Firebase init failed");
 
-      const qTop = query(ref(fb.db, "scores"), orderByChild("score"), limitToLast(20));
+      // Top50：score 排序取後 50，再用 tie-breaker（stress asc / resolve desc / createdAt desc）
+      const qTop = query(ref(fb.db, "scores"), orderByChild("score"), limitToLast(50));
       const topSnap = await get(qTop);
       const topArr = [];
       topSnap.forEach(ch => topArr.push({ key: ch.key, ...ch.val() }));
-      topArr.sort((a,b) => (b.score - a.score) || (a.stress - b.stress) || ((b.resolve||0) - (a.resolve||0)));
 
-      const qLatest = query(ref(fb.db, "scores"), orderByChild("createdAt"), limitToLast(10));
+      topArr.sort((a,b) => {
+        const ds = (Number(b.score||0) - Number(a.score||0));
+        if (ds !== 0) return ds;
+        const dst = (Number(a.stress||0) - Number(b.stress||0));
+        if (dst !== 0) return dst;
+        const dr = (Number(b.resolve||0) - Number(a.resolve||0));
+        if (dr !== 0) return dr;
+        return Number(b.createdAt||0) - Number(a.createdAt||0);
+      });
+
+      // Latest20：createdAt 取後 20（最新在前）
+      const qLatest = query(ref(fb.db, "scores"), orderByChild("createdAt"), limitToLast(20));
       const latestSnap = await get(qLatest);
       const latestArr = [];
       latestSnap.forEach(ch => latestArr.push({ key: ch.key, ...ch.val() }));
-      latestArr.sort((a,b) => (b.createdAt - a.createdAt));
+      latestArr.sort((a,b) => Number(b.createdAt||0) - Number(a.createdAt||0));
 
-      renderTop20(topArr);
-      renderLatest10(latestArr);
+      renderTop50(topArr);
+      renderLatest20(latestArr);
 
       els.lb.status.textContent = `更新 ${fmtTime(Date.now())}`;
+
     } catch (e) {
-      console.error(e);
-      els.lb.status.textContent = "更新失敗";
+      console.error("refreshLeaderboard error:", e);
+      els.lb.status.textContent = "更新失敗（可能是 Rules / 網路）";
     }
   };
 
-  function renderTop20(items) {
-    els.lb.top20.innerHTML = "";
+  function renderTop50(items) {
+    els.lb.top50.innerHTML = "";
     items.forEach((s, i) => {
       const tr = document.createElement("tr");
       tr.className = "border-b border-gray-800 text-sm";
       tr.innerHTML = `
         <td class="py-2 text-gray-500">${i+1}</td>
-        <td class="py-2 font-bold text-white">${escapeHtml(s.name || "—")}</td>
+        <td class="py-2 font-black text-white">${escapeHtml(s.name || "—")}</td>
         <td class="py-2 text-right text-yellow-400 font-mono">${Number(s.score||0)}</td>
         <td class="py-2 text-right text-red-400 font-mono">${Number(s.stress||0)}%</td>
       `;
-      els.lb.top20.appendChild(tr);
+      els.lb.top50.appendChild(tr);
     });
   }
 
-  function renderLatest10(items) {
-    els.lb.latest10.innerHTML = "";
+  function renderLatest20(items) {
+    els.lb.latest20.innerHTML = "";
     items.forEach((s) => {
       const tr = document.createElement("tr");
       tr.className = "border-b border-gray-800 text-sm";
       tr.innerHTML = `
         <td class="py-2 text-gray-500 font-mono">${fmtTime(s.createdAt || Date.now())}</td>
-        <td class="py-2 font-bold text-white">${escapeHtml(s.name || "—")}</td>
+        <td class="py-2 font-black text-white">${escapeHtml(s.name || "—")}</td>
         <td class="py-2 text-right text-yellow-400 font-mono">${Number(s.score||0)}</td>
       `;
-      els.lb.latest10.appendChild(tr);
+      els.lb.latest20.appendChild(tr);
     });
   }
 
@@ -1154,14 +1110,31 @@
     }[c]));
   }
 
+  /*********************
+   * Result actions
+   *********************/
+  window.restartSameMode = () => {
+    // 同模式再來一次（不 reload）
+    showScreen('game');
+    startGame();
+  };
+
+  window.backToHome = () => {
+    // 回主畫面（不 reload）
+    clearInterval(state.timerInterval);
+    clearInterval(state.spawnerInterval);
+    clearInterval(state.neglectInterval);
+    clearInterval(state.lbAutoTimer);
+    document.body.classList.remove('shake-hard');
+
+    // reset UI
+    resetStateForGame();
+    showScreen('start');
+  };
+
   // Init
-  resetToInitState();
-
-  // 若有人用瀏覽器特殊快取回來，也強制回到 init
-  window.addEventListener('pageshow', (e) => {
-    if (e.persisted) backToStart();
-  });
+  updateButtonsState(false);
+  updateFatigueUI(true);
 </script>
-
 </body>
 </html>
