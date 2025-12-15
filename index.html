@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>職場服務大挑戰 (空服員) - 單機版</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root { font-family: 'Inter', system-ui, sans-serif; }
+    body { overflow: hidden; user-select: none; }
+
+    @keyframes shake {
+      0% { transform: translate(1px, 1px) rotate(0deg); }
+      10% { transform: translate(-1px, -2px) rotate(-1deg); }
+      20% { transform: translate(-3px, 0px) rotate(1deg); }
+      30% { transform: translate(3px, 2px) rotate(0deg); }
+      40% { transform: translate(1px, -1px) rotate(1deg); }
+      50% { transform: translate(-1px, 2px) rotate(-1deg); }
+      60% { transform: translate(-3px, 1px) rotate(0deg); }
+      70% { transform: translate(3px, 1px) rotate(-1deg); }
+      80% { transform: translate(-1px, -1px) rotate(1deg); }
+      90% { transform: translate(1px, 2px) rotate(0deg); }
+      100% { transform: translate(1px, -2px) rotate(-1deg); }
+    }
+    .shake-hard { animation: shake 0.5s infinite; }
+    .shake-soft { animation: shake 0.5s; }
+
+    @keyframes popIn {
+      0% { transform: scale(0); opacity: 0; }
+      80% { transform: scale(1.1); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .event-card {
+      animation: popIn 0.28s ease-out forwards;
+      position: absolute;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      max-width: 300px;
+      z-index: 10;
+    }
+    .event-card.selected {
+      z-index: 50 !important;
+      transform: scale(1.15) !important;
+      border: 4px solid #3b82f6;
+      box-shadow: 0 0 30px rgba(59, 130, 246, 0.6);
+    }
+
+    .btn-action {
+      transition: transform 0.1s;
+      box-shadow: 0 6px 0 rgba(0,0,0,0.2);
+    }
+    .btn-action:active {
+      transform: translateY(6px);
+      box-shadow: 0 0 0 rgba(0,0,0,0.2);
+    }
+    .btn-action:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .fade-in-text {
+      opacity: 0;
+      transition: opacity 0.9s ease-in;
+    }
+    .visible { opacity: 1; }
+  </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex flex-col">
+
+  <!-- 1. 開始畫面 -->
+  <div id="start-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-900 transition-opacity duration-500">
+    <h1 class="text-6xl font-black text-yellow-400 mb-4 tracking-wider">職場服務大挑戰</h1>
+    <h2 class="text-3xl text-white mb-10">空服員 60秒暴走實測</h2>
+    <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl text-center border border-slate-700 max-w-2xl">
+      <p class="text-gray-400 mb-6 text-lg">
+        規則：<span class="text-white font-bold">點選事件卡</span> → 按下方按鈕處理。<br>
+        你不會「做錯」，但你可能會「撐不住」。
+      </p>
+      <button onclick="startCountdown()" class="bg-blue-600 hover:bg-blue-500 text-white text-4xl font-bold py-6 px-20 rounded-full shadow-lg transition transform hover:scale-105">
+        開始挑戰
+      </button>
+    </div>
+  </div>
+
+  <!-- 倒數遮罩 -->
+  <div id="countdown-overlay" class="hidden fixed inset-0 z-[60] bg-black/90 flex items-center justify-center">
+    <span id="countdown-number" class="text-9xl font-black text-white">3</span>
+  </div>
+
+  <!-- 2. 遊戲主畫面 -->
+  <div id="game-screen" class="hidden flex-col h-screen w-full max-w-7xl mx-auto p-4">
+
+    <!-- 儀表板 -->
+    <div class="flex justify-between items-end mb-4 bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+      <!-- 倒數 -->
+      <div class="text-center w-32">
+        <div class="text-gray-400 text-sm font-bold">剩餘時間</div>
+        <div id="timer" class="text-6xl font-black text-white tabular-nums">60</div>
+      </div>
+
+      <!-- 壓力條 -->
+      <div class="flex-1 mx-8">
+        <div class="flex justify-between mb-1">
+          <span class="text-sm font-bold text-red-400">情緒壓力</span>
+          <span id="stress-val" class="text-sm font-bold text-red-400">20%</span>
+        </div>
+        <div class="h-8 bg-slate-700 rounded-full overflow-hidden border border-slate-600 relative">
+          <div id="stress-bar" class="h-full bg-gradient-to-r from-green-500 via-yellow-500 to-red-600 transition-all duration-250" style="width: 20%;"></div>
+        </div>
+      </div>
+
+      <!-- 滿意度 -->
+      <div class="text-center w-44">
+        <div class="text-gray-400 text-sm font-bold">顧客滿意度</div>
+        <div class="flex items-center justify-center gap-2">
+          <span id="sat-icon" class="text-4xl">😐</span>
+          <span id="sat-val" class="text-5xl font-black text-blue-400 tabular-nums">70</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 事件區 -->
+    <div id="event-area" class="relative flex-1 bg-slate-800/30 rounded-2xl border-2 border-dashed border-slate-600 mb-4 overflow-hidden">
+      <div id="empty-msg" class="absolute inset-0 flex items-center justify-center text-slate-600 text-xl font-bold pointer-events-none">
+        等待事件發生...
+      </div>
+    </div>
+
+    <!-- 操作區 -->
+    <div class="grid grid-cols-3 gap-6 h-32">
+      <button id="btn-soothe" onclick="handleAction('soothe')" class="btn-action bg-green-600 hover:bg-green-500 text-white rounded-xl flex flex-col items-center justify-center relative">
+        <span class="text-3xl font-black">安撫</span>
+        <div class="fatigue-bar absolute bottom-0 left-0 h-1 bg-white/50 w-full transition-all"></div>
+      </button>
+      <button id="btn-explain" onclick="handleAction('explain')" class="btn-action bg-yellow-600 hover:bg-yellow-500 text-white rounded-xl flex flex-col items-center justify-center relative">
+        <span class="text-3xl font-black">說明</span>
+        <div class="fatigue-bar absolute bottom-0 left-0 h-1 bg-white/50 w-full transition-all"></div>
+      </button>
+      <button id="btn-act" onclick="handleAction('act')" class="btn-action bg-red-600 hover:bg-red-500 text-white rounded-xl flex flex-col items-center justify-center relative">
+        <span class="text-3xl font-black">行動</span>
+        <div class="fatigue-bar absolute bottom-0 left-0 h-1 bg-white/50 w-full transition-all"></div>
+      </button>
+    </div>
+
+    <div id="fatigue-msg" class="text-center text-orange-400 font-bold h-6 mt-2 opacity-0 transition-opacity"></div>
+  </div>
+
+  <!-- 3. 結算畫面 -->
+  <div id="result-screen" class="hidden fixed inset-0 z-50 bg-black flex flex-col items-center justify-center p-8 overflow-y-auto">
+    <h2 class="text-5xl font-black text-red-500 mb-8 tracking-widest uppercase border-b-4 border-red-500 pb-2">挑戰結束</h2>
+
+    <div class="text-center mb-10 space-y-4 max-w-3xl">
+      <p id="final-remark-1" class="text-2xl text-white font-light fade-in-text"></p>
+      <p id="final-remark-2" class="text-2xl text-white font-light fade-in-text"></p>
+    </div>
+
+    <div class="flex gap-8 mb-10 w-full max-w-4xl">
+      <div class="flex-1 bg-gray-900 p-6 rounded-xl border border-gray-800 text-center">
+        <div class="text-gray-400 text-sm uppercase">總分</div>
+        <div id="final-score" class="text-6xl font-black text-yellow-400">0</div>
+      </div>
+      <div class="flex-1 bg-gray-900 p-6 rounded-xl border border-gray-800 text-center space-y-2">
+        <div class="flex justify-between border-b border-gray-800 pb-2">
+          <span class="text-gray-400">顧客滿意度</span>
+          <span id="final-sat" class="text-blue-400 font-bold">0</span>
+        </div>
+        <div class="flex justify-between border-b border-gray-800 pb-2">
+          <span class="text-gray-400">情緒壓力</span>
+          <span id="final-stress" class="text-red-400 font-bold">0</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-400">解決事件數</span>
+          <span id="final-resolve" class="text-green-400 font-bold">0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="w-full max-w-2xl bg-gray-900 rounded-xl p-6 border border-gray-700 mb-8">
+      <h3 class="text-xl text-yellow-400 font-bold mb-4 flex justify-between items-center">
+        <span>🏆 現場英雄榜 (Top 5)</span>
+        <button onclick="customConfirm('確定要清空排行榜嗎？', () => clearLeaderboard())" class="text-xs text-gray-600 hover:text-red-500 underline">清空紀錄</button>
+      </h3>
+
+      <div class="flex gap-2 mb-4">
+        <input type="text" id="player-name" placeholder="輸入暱稱..." class="flex-1 bg-gray-800 text-white px-4 py-2 rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500" maxlength="10">
+        <button id="btn-save" onclick="saveScore()" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-lg font-bold">登記</button>
+      </div>
+
+      <table class="w-full text-left">
+        <thead>
+          <tr class="text-gray-500 text-sm border-b border-gray-800">
+            <th class="pb-2">#</th>
+            <th class="pb-2">姓名/隊伍</th>
+            <th class="pb-2 text-right">分數</th>
+            <th class="pb-2 text-right">壓力</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboard-body"></tbody>
+      </table>
+    </div>
+
+    <button onclick="location.reload()" class="text-gray-400 hover:text-white border border-gray-600 hover:border-white px-8 py-3 rounded-full transition">
+      下一位挑戰者 (重新開始)
+    </button>
+  </div>
+
+<script>
+  const GAME_DURATION = 60;
+  const MAX_EVENTS_ON_SCREEN = 6;
+
+  const EVENTS = [
+    // soothe
+    { id: 'angry',   emoji: '😠', title: '憤怒客訴',     prompt: '我要見你們主管！',           type: 'soothe',  color: 'bg-red-500' },
+    { id: 'crying',  emoji: '😢', title: '情緒崩潰',     prompt: '我真的快撐不住了…',         type: 'soothe',  color: 'bg-indigo-500' },
+    { id: 'panic',   emoji: '😱', title: '恐慌發作',     prompt: '我呼吸不到…我好怕！',       type: 'soothe',  color: 'bg-fuchsia-600' },
+    { id: 'rude',    emoji: '😤', title: '嫌你臉太臭',   prompt: '你可以不要那麼不耐煩嗎？',   type: 'soothe',  color: 'bg-rose-600' },
+    { id: 'gender',  emoji: '🙅‍♀️', title: '指定女性空服員', prompt: '我要女生來服務！你不行。',  type: 'soothe',  color: 'bg-pink-600' },
+    { id: 'baby',    emoji: '👶', title: '嬰兒哭鬧',     prompt: '哇啊啊啊！！！',             type: 'soothe',  color: 'bg-pink-500' },
+
+    // explain
+    { id: 'anxiety', emoji: '😰', title: '時間焦慮',     prompt: '轉機要來不及了！',           type: 'explain', color: 'bg-orange-500' },
+    { id: 'seat',    emoji: '💺', title: '要求換座位',   prompt: '我不想坐這裡，幫我換！',     type: 'explain', color: 'bg-teal-600' },
+    { id: 'narrow',  emoji: '📏', title: '座位太狹窄',   prompt: '這也太擠了吧？',             type: 'explain', color: 'bg-cyan-700' },
+    { id: 'fat',     emoji: '😫', title: '隔壁太擠',     prompt: '隔壁一直擠到我！',           type: 'explain', color: 'bg-sky-700' },
+    { id: 'mealbad', emoji: '🍱', title: '餐點不好吃',   prompt: '這個也太難吃了吧？',         type: 'explain', color: 'bg-amber-700' },
+    { id: 'vip',     emoji: '👑', title: '升艙要求',     prompt: '我是高卡會員，應該要升艙。',   type: 'explain', color: 'bg-purple-600' },
+
+    // act
+    { id: 'spill',   emoji: '🥤', title: '打翻飲料',     prompt: '咖啡灑在我身上了！',         type: 'act',     color: 'bg-amber-800' },
+    { id: 'sick',    emoji: '🤢', title: '身體不適',     prompt: '我頭好暈…想吐。',           type: 'act',     color: 'bg-lime-700' },
+    { id: 'blanket', emoji: '🧣', title: '太冷要毛毯',   prompt: '我快冷死了，快給我毯子。',   type: 'act',     color: 'bg-blue-600' },
+    { id: 'wifi',    emoji: '📶', title: 'Wi-Fi 不能用', prompt: '網路連不上，你們在幹嘛？',   type: 'act',     color: 'bg-slate-600' },
+    { id: 'toilet',  emoji: '🚻', title: '廁所排隊爆滿', prompt: '我快憋不住了！',             type: 'act',     color: 'bg-emerald-700' },
+    { id: 'headset', emoji: '🎧', title: '耳機壞了',     prompt: '耳機沒聲音，幫我處理。',     type: 'act',     color: 'bg-violet-700' }
+  ];
+
+  const EVENT_BY_ID = Object.fromEntries(EVENTS.map(e => [e.id, e]));
+
+  const IMPACTS = {
+    soothe:  { soothe: [ 14, -10], explain: [  6,  -6], act: [  4,  0] },
+    explain: { soothe: [ -6,   6], explain: [ 11,  -6], act: [  1,  4] },
+    act:     { soothe: [ -6,  10], explain: [  2,   4], act: [ 14,  -5] }
+  };
+
+  const FINAL_REMARKS = [
+    { r1: "「你做的不是『對不對』，而是『能不能穩住自己』。」", r2: "「情緒不是敵人，是訊號：先聽見，再回應。」" },
+    { r1: "「壓力一高，最先失真的通常不是英文，是語氣與判斷。」", r2: "「你能做的，是把情緒轉成可合作的訊息。」" },
+    { r1: "「你不是不努力，而是資源有限：注意力、時間、耐心都會耗。」", r2: "「換策略，才是自我調節的開始。」" },
+    { r1: "「同理不是順從：先承接感受，再清楚說界線。」", r2: "「穩定的回應，比華麗的句型更專業。」" },
+    { r1: "「你撐住的瞬間，就是『職場素養』被看見的瞬間。」", r2: "「下一次：更早覺察、更快降壓、更清楚決策。」" }
+  ];
+
+  /**
+   * ✅ 連鎖規則（保持簡短、但很有感）
+   * onSpawn: 事件出現後可能引發
+   * onResolve: 事件被處理後可能引發
+   */
+  const CHAIN_RULES = {
+    // 指定女性空服員 → 容易引發「嫌你臉臭」或「憤怒客訴」
+    gender: {
+      onSpawn: [
+        { id: 'rude',  p: 0.55, delayMs: [650, 1100] },
+        { id: 'angry', p: 0.25, delayMs: [800, 1200] }
+      ],
+      onResolve: [
+        { id: 'angry', p: 0.20, delayMs: [650, 1100] }
+      ]
+    },
+
+    // 隔壁太擠 / 座位太狹窄 → 常引發「換座位」
+    fat: {
+      onResolve: [
+        { id: 'seat', p: 0.55, delayMs: [650, 1100] }
+      ]
+    },
+    narrow: {
+      onResolve: [
+        { id: 'seat', p: 0.45, delayMs: [650, 1100] }
+      ]
+    },
+
+    // 換座位 → 可能引發「時間焦慮」（卡住流程）
+    seat: {
+      onResolve: [
+        { id: 'anxiety', p: 0.35, delayMs: [650, 1050] }
+      ]
+    },
+
+    // 餐點不好吃 → 容易升級成「憤怒客訴」
+    mealbad: {
+      onResolve: [
+        { id: 'angry', p: 0.45, delayMs: [650, 1100] }
+      ]
+    },
+
+    // Wi-Fi 不能用 → 容易引發「嫌你臉臭」（你越解釋越火）
+    wifi: {
+      onResolve: [
+        { id: 'rude', p: 0.35, delayMs: [650, 1100] }
+      ]
+    },
+
+    // 打翻飲料 → 可能引發「憤怒客訴」（衣服髒了）
+    spill: {
+      onResolve: [
+        { id: 'angry', p: 0.35, delayMs: [650, 1100] }
+      ]
+    },
+
+    // 身體不適 → 可能引發「恐慌發作」（情緒升級）
+    sick: {
+      onResolve: [
+        { id: 'panic', p: 0.30, delayMs: [650, 1100] }
+      ]
+    },
+
+    // 嬰兒哭鬧 → 可能引發「嫌你臉臭」（旁人抱怨你沒處理）
+    baby: {
+      onResolve: [
+        { id: 'rude', p: 0.28, delayMs: [650, 1100] }
+      ]
+    }
+  };
+
+  let state = {
+    time: GAME_DURATION,
+    satisfaction: 70,
+    stress: 20,
+    resolveCount: 0,
+    activeEvents: [],
+    selectedEventId: null,
+    fatigue: { soothe: 0, explain: 0, act: 0 },
+    isPlaying: false,
+    timerInterval: null,
+    spawnerInterval: null,
+    neglectInterval: null,
+    currentSpawnMs: null
+  };
+
+  const els = {
+    timer: document.getElementById('timer'),
+    stressBar: document.getElementById('stress-bar'),
+    stressVal: document.getElementById('stress-val'),
+    satVal: document.getElementById('sat-val'),
+    satIcon: document.getElementById('sat-icon'),
+    eventArea: document.getElementById('event-area'),
+    emptyMsg: document.getElementById('empty-msg'),
+    fatigueMsg: document.getElementById('fatigue-msg'),
+    btns: {
+      soothe: document.getElementById('btn-soothe'),
+      explain: document.getElementById('btn-explain'),
+      act: document.getElementById('btn-act')
+    }
+  };
+
+  function randInt(a, b) {
+    return Math.floor(Math.random() * (b - a + 1)) + a;
+  }
+
+  function startCountdown() {
+    document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('countdown-overlay').classList.remove('hidden');
+
+    let count = 3;
+    const countEl = document.getElementById('countdown-number');
+
+    const cInt = setInterval(() => {
+      count--;
+      if (count > 0) countEl.innerText = count;
+      else {
+        clearInterval(cInt);
+        document.getElementById('countdown-overlay').classList.add('hidden');
+        startGame();
+      }
+    }, 1000);
+  }
+
+  function startGame() {
+    document.getElementById('game-screen').classList.remove('hidden');
+    document.getElementById('game-screen').classList.add('flex');
+
+    state.isPlaying = true;
+    updateUI();
+
+    state.timerInterval = setInterval(() => {
+      state.time--;
+      updateUI();
+      updateDifficulty();
+      if (state.time <= 0) endGame();
+    }, 1000);
+
+    // ✅ 保持你現有的節奏設定（前 20 秒不慢）
+    setSpawner(2200);
+
+    state.neglectInterval = setInterval(() => {
+      if (state.activeEvents.length > 0) {
+        const satPenalty = state.activeEvents.length * 2.0;
+        const stressPenalty = state.activeEvents.length * 1.0;
+
+        state.satisfaction = Math.max(0, state.satisfaction - satPenalty);
+        state.stress = Math.min(100, state.stress + stressPenalty);
+
+        els.stressVal.classList.add('shake-soft');
+        setTimeout(() => els.stressVal.classList.remove('shake-soft'), 180);
+
+        updateUI();
+      }
+    }, 1000);
+  }
+
+  function updateDifficulty() {
+    if (!state.isPlaying) return;
+
+    const elapsed = GAME_DURATION - state.time;
+    let newInterval;
+
+    if (elapsed < 10) newInterval = 2200;
+    else if (elapsed < 20) newInterval = 1700;
+    else if (elapsed < 30) newInterval = 1250;
+    else if (elapsed < 40) newInterval = 950;
+    else if (elapsed < 50) newInterval = 700;
+    else newInterval = 520;
+
+    if (state.currentSpawnMs !== newInterval) setSpawner(newInterval);
+  }
+
+  function setSpawner(ms) {
+    if (state.spawnerInterval) clearInterval(state.spawnerInterval);
+    state.currentSpawnMs = ms;
+
+    state.spawnerInterval = setInterval(() => {
+      if (!state.isPlaying) return;
+      if (state.activeEvents.length < MAX_EVENTS_ON_SCREEN) spawnRandomEvent();
+    }, ms);
+  }
+
+  function spawnRandomEvent() {
+    const template = EVENTS[Math.floor(Math.random() * EVENTS.length)];
+    spawnSpecificEvent(template.id, 'natural');
+  }
+
+  // ✅ 允許連鎖直接指定某個事件 id
+  function spawnSpecificEvent(eventId, source = 'chain') {
+    const template = EVENT_BY_ID[eventId];
+    if (!template) return;
+    if (!state.isPlaying) return;
+    if (state.activeEvents.length >= MAX_EVENTS_ON_SCREEN) return;
+
+    const top = Math.random() * 62 + 3;
+    const left = Math.random() * 64 + 3;
+
+    const eventObj = {
+      uniqueId: Date.now() + Math.random(),
+      ...template,
+      x: left,
+      y: top,
+      source
+    };
+
+    state.activeEvents.push(eventObj);
+    renderEventCard(eventObj);
+    els.emptyMsg.classList.add('hidden');
+
+    // 連鎖：出現後
+    maybeTriggerChain(eventObj, 'onSpawn');
+  }
+
+  function maybeTriggerChain(eventObj, mode) {
+    const rule = CHAIN_RULES[eventObj.id];
+    if (!rule || !rule[mode]) return;
+
+    for (const item of rule[mode]) {
+      if (!state.isPlaying) return;
+      if (Math.random() <= item.p) {
+        const delay = Array.isArray(item.delayMs) ? randInt(item.delayMs[0], item.delayMs[1]) : item.delayMs;
+        scheduleChainSpawn(item.id, delay);
+      }
+    }
+  }
+
+  function scheduleChainSpawn(eventId, delayMs) {
+    // 避免一次連鎖把畫面塞爆：如果滿了，延後重試幾次
+    let attempts = 0;
+    const maxAttempts = 4;
+
+    const trySpawn = () => {
+      if (!state.isPlaying) return;
+      if (state.activeEvents.length < MAX_EVENTS_ON_SCREEN) {
+        spawnSpecificEvent(eventId, 'chain');
+        return;
+      }
+      attempts++;
+      if (attempts <= maxAttempts) {
+        setTimeout(trySpawn, 280);
+      }
+    };
+
+    setTimeout(trySpawn, delayMs);
+  }
+
+  function renderEventCard(ev) {
+    const div = document.createElement('div');
+    div.id = `ev-${ev.uniqueId}`;
+    div.className = `event-card p-4 rounded-xl shadow-lg border-2 border-white/20 select-none ${ev.color}`;
+    div.style.top = `${ev.y}%`;
+    div.style.left = `${ev.x}%`;
+
+    div.innerHTML = `
+      <div class="flex items-center gap-3">
+        <span class="text-4xl shadow-sm">${ev.emoji}</span>
+        <div>
+          <h4 class="font-bold text-lg leading-tight">${ev.title}</h4>
+          <p class="text-sm font-medium opacity-90 italic">"${ev.prompt}"</p>
+        </div>
+      </div>
+    `;
+
+    div.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectEvent(ev.uniqueId);
+    });
+
+    els.eventArea.appendChild(div);
+  }
+
+  function selectEvent(id) {
+    document.querySelectorAll('.event-card').forEach(el => el.classList.remove('selected'));
+    const el = document.getElementById(`ev-${id}`);
+    if (el) {
+      el.classList.add('selected');
+      state.selectedEventId = id;
+      updateButtonsState(true);
+    }
+  }
+
+  els.eventArea.addEventListener('click', () => {
+    document.querySelectorAll('.event-card').forEach(el => el.classList.remove('selected'));
+    state.selectedEventId = null;
+    updateButtonsState(false);
+  });
+
+  function updateButtonsState(hasSelection) {
+    Object.values(els.btns).forEach(btn => {
+      btn.disabled = !hasSelection;
+      if (!hasSelection) btn.classList.add('opacity-50', 'cursor-not-allowed');
+      else btn.classList.remove('opacity-50', 'cursor-not-allowed');
+    });
+  }
+
+  function handleAction(actionType) {
+    if (!state.selectedEventId || !state.isPlaying) return;
+
+    const evIndex = state.activeEvents.findIndex(e => e.uniqueId === state.selectedEventId);
+    if (evIndex === -1) return;
+    const event = state.activeEvents[evIndex];
+
+    // 疲勞：100% -> 70% -> 40% -> 20%
+    const counts = state.fatigue[actionType];
+    let multiplier = 1.0;
+    if (counts === 1) multiplier = 0.7;
+    else if (counts === 2) multiplier = 0.4;
+    else if (counts >= 3) multiplier = 0.2;
+
+    for (let key in state.fatigue) {
+      if (key === actionType) state.fatigue[key]++;
+      else state.fatigue[key] = 0;
+    }
+
+    const impact = IMPACTS[actionType][event.type];
+    const actualSat = impact[0] * multiplier;
+    const actualStress = impact[1] * multiplier;
+
+    state.satisfaction = Math.min(100, Math.max(0, state.satisfaction + actualSat));
+    state.stress = Math.min(100, Math.max(0, state.stress + actualStress));
+    state.resolveCount++;
+
+    const domEl = document.getElementById(`ev-${state.selectedEventId}`);
+    if (domEl) domEl.remove();
+    state.activeEvents.splice(evIndex, 1);
+    state.selectedEventId = null;
+    updateButtonsState(false);
+
+    // ✅ 連鎖：處理後
+    maybeTriggerChain(event, 'onResolve');
+
+    updateUI();
+
+    if (multiplier < 1.0) {
+      const label = actionType === 'soothe' ? '安撫' : actionType === 'explain' ? '說明' : '行動';
+      els.fatigueMsg.innerText = `【${label}】疲勞效應：效果剩 ${(multiplier * 100).toFixed(0)}%（試著切換策略）`;
+      els.fatigueMsg.style.opacity = 1;
+    } else {
+      els.fatigueMsg.style.opacity = 0;
+    }
+
+    if (state.activeEvents.length === 0) els.emptyMsg.classList.remove('hidden');
+  }
+
+  function updateUI() {
+    if ((state.satisfaction <= 0 || state.stress >= 100) && state.isPlaying) {
+      state.satisfaction = Math.max(0, state.satisfaction);
+      state.stress = Math.min(100, state.stress);
+      endGame();
+      return;
+    }
+
+    els.timer.innerText = state.time;
+    if (state.time <= 15) els.timer.classList.add('text-red-500', 'shake-soft');
+    else els.timer.classList.remove('text-red-500', 'shake-soft');
+
+    els.stressVal.innerText = Math.floor(state.stress) + '%';
+    els.stressBar.style.width = state.stress + '%';
+
+    els.satVal.innerText = Math.floor(state.satisfaction);
+    if (state.satisfaction > 82) els.satIcon.innerText = '🤩';
+    else if (state.satisfaction > 55) els.satIcon.innerText = '🙂';
+    else if (state.satisfaction > 25) els.satIcon.innerText = '😰';
+    else els.satIcon.innerText = '🤬';
+
+    Object.keys(state.fatigue).forEach(key => {
+      const count = state.fatigue[key];
+      const btn = els.btns[key];
+      const bar = btn.querySelector('.fatigue-bar');
+
+      let width = '100%';
+      if (count === 1) width = '70%';
+      else if (count === 2) width = '40%';
+      else if (count >= 3) width = '20%';
+      bar.style.width = width;
+
+      if (count >= 3) bar.classList.add('bg-red-500');
+      else bar.classList.remove('bg-red-500');
+    });
+
+    if (state.stress > 82 || state.time < 10) document.body.classList.add('shake-hard');
+    else document.body.classList.remove('shake-hard');
+  }
+
+  function endGame() {
+    state.isPlaying = false;
+    clearInterval(state.timerInterval);
+    clearInterval(state.spawnerInterval);
+    clearInterval(state.neglectInterval);
+
+    document.body.classList.remove('shake-hard');
+
+    document.getElementById('game-screen').classList.add('hidden');
+    document.getElementById('result-screen').classList.remove('hidden');
+    document.getElementById('player-name').value = '';
+    document.getElementById('btn-save').disabled = false;
+    document.getElementById('btn-save').innerText = "登記";
+
+    const finalSat = Math.floor(state.satisfaction);
+    const finalStress = Math.floor(state.stress);
+    const resolve = state.resolveCount;
+    const totalScore = Math.floor((finalSat * 1.2) + (resolve * 6) - (finalStress * 1.0));
+
+    document.getElementById('final-score').innerText = totalScore;
+    document.getElementById('final-sat').innerText = finalSat;
+    document.getElementById('final-stress').innerText = finalStress;
+    document.getElementById('final-resolve').innerText = resolve;
+
+    const remark = FINAL_REMARKS[Math.floor(Math.random() * FINAL_REMARKS.length)];
+    document.getElementById('final-remark-1').innerText = remark.r1;
+    document.getElementById('final-remark-2').innerText = remark.r2;
+
+    setTimeout(() => {
+      document.querySelectorAll('.fade-in-text').forEach(el => el.classList.add('visible'));
+    }, 120);
+
+    renderLeaderboard();
+  }
+
+  const STORAGE_KEY = 'FA_Challenge_Rank_V2';
+
+  function getScores() {
+    try {
+      const s = localStorage.getItem(STORAGE_KEY);
+      return s ? JSON.parse(s) : [];
+    } catch (e) {
+      console.error("Error reading scores:", e);
+      return [];
+    }
+  }
+
+  function saveScore() {
+    const nameInput = document.getElementById('player-name');
+    const name = nameInput.value.trim() || `Player ${Math.floor(Math.random() * 999)}`;
+    const score = parseInt(document.getElementById('final-score').innerText);
+    const stress = parseInt(document.getElementById('final-stress').innerText);
+    const resolve = parseInt(document.getElementById('final-resolve').innerText);
+
+    const newEntry = { name, score, stress, resolve, date: Date.now() };
+    let scores = getScores();
+    scores.push(newEntry);
+
+    scores.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      if (a.stress !== b.stress) return a.stress - b.stress;
+      return b.resolve - a.resolve;
+    });
+
+    scores = scores.slice(0, 5);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(scores)); }
+    catch (e) { console.error("Error saving score:", e); }
+
+    document.getElementById('btn-save').disabled = true;
+    document.getElementById('btn-save').innerText = "已登記";
+    renderLeaderboard();
+  }
+
+  function customConfirm(message, callback) {
+    if (window.confirm(message)) callback();
+  }
+
+  function renderLeaderboard() {
+    const tbody = document.getElementById('leaderboard-body');
+    const scores = getScores();
+    tbody.innerHTML = '';
+
+    scores.forEach((s, i) => {
+      const tr = document.createElement('tr');
+      tr.className = "border-b border-gray-800 text-sm";
+      tr.innerHTML = `
+        <td class="py-2 text-gray-500">${i + 1}</td>
+        <td class="py-2 font-bold text-white">${s.name}</td>
+        <td class="py-2 text-right text-yellow-400 font-mono">${s.score}</td>
+        <td class="py-2 text-right text-red-400 font-mono">${s.stress}%</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function clearLeaderboard() {
+    localStorage.removeItem(STORAGE_KEY);
+    renderLeaderboard();
+  }
+
+  updateButtonsState(false);
+</script>
+</body>
+</html>
