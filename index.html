@@ -6,28 +6,6 @@
   <title>職場服務大挑戰 (空服員) - 單機版</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* === Mobile responsive controls === */
-.controls-wrap { height: 7.5rem; }           /* default: 120px */
-.controls-btn  { padding: 0.9rem 0.75rem; }  /* default button padding */
-.controls-title{ font-size: 1.75rem; line-height: 1.1; } /* ~text-3xl */
-.controls-sub  { font-size: 0.9rem; line-height: 1.1; }  /* small helper text */
-
-@media (max-width: 640px) {
-  /* 手機：底部縮矮，避免被擠出畫面 */
-  .controls-wrap { height: 6.2rem; }                 /* 約 100px */
-  .controls-btn  { padding: 0.65rem 0.6rem; }
-  .controls-title{ font-size: 1.5rem; }              /* 變小一階 */
-  .fatigue-bar   { height: 3px !important; }         /* 疲勞條更薄 */
-  #fatigue-msg   { font-size: 0.95rem; line-height: 1.2; }
-}
-
-@media (max-width: 380px) {
-  /* 超小螢幕再縮一點 */
-  .controls-wrap { height: 5.6rem; }                 /* 約 90px */
-  .controls-title{ font-size: 1.35rem; }
-  #fatigue-msg   { font-size: 0.85rem; }
-}
-
     :root { font-family: 'Inter', system-ui, sans-serif; }
     body { overflow: hidden; user-select: none; }
 
@@ -89,6 +67,32 @@
       transition: opacity 0.9s ease-in;
     }
     .visible { opacity: 1; }
+
+    /* =========================
+       ✅ Responsive controls
+       目標：手機直向不擠爆，三顆按鈕下方都看得到
+       ========================= */
+    .controls-wrap { height: 7.5rem; }                 /* default (desktop-ish): 120px */
+    .controls-btn  { padding: 0.9rem 0.75rem; }
+    .controls-title{ font-size: 1.75rem; line-height: 1.1; font-weight: 900; }
+    .fatigue-bar   { height: 4px; }
+
+    /* 疲勞提示：固定高度，不會把按鈕往下推到看不到 */
+    #fatigue-msg { min-height: 1.35rem; }
+
+    @media (max-width: 640px) {
+      .controls-wrap { height: 6.2rem; }               /* ~100px */
+      .controls-btn  { padding: 0.65rem 0.6rem; }
+      .controls-title{ font-size: 1.45rem; }
+      .fatigue-bar   { height: 3px; }
+      #fatigue-msg   { font-size: 0.95rem; line-height: 1.2; }
+    }
+
+    @media (max-width: 380px) {
+      .controls-wrap { height: 5.6rem; }               /* ~90px */
+      .controls-title{ font-size: 1.30rem; }
+      #fatigue-msg   { font-size: 0.85rem; }
+    }
   </style>
 </head>
 <body class="bg-slate-900 text-white min-h-screen flex flex-col">
@@ -114,73 +118,75 @@
   </div>
 
   <!-- 2. 遊戲主畫面 -->
-  <div id="game-screen" class="hidden flex-col h-screen w-full max-w-7xl mx-auto p-4">
+  <div id="game-screen" class="hidden flex-col h-screen w-full max-w-7xl mx-auto p-3 sm:p-4">
 
     <!-- 儀表板 -->
-    <div class="flex justify-between items-end mb-4 bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+    <div class="flex justify-between items-end mb-3 sm:mb-4 bg-slate-800/50 p-3 sm:p-4 rounded-xl border border-slate-700">
       <!-- 倒數 -->
-      <div class="text-center w-32">
-        <div class="text-gray-400 text-sm font-bold">剩餘時間</div>
-        <div id="timer" class="text-6xl font-black text-white tabular-nums">60</div>
+      <div class="text-center w-28 sm:w-32">
+        <div class="text-gray-400 text-xs sm:text-sm font-bold">剩餘時間</div>
+        <div id="timer" class="text-5xl sm:text-6xl font-black text-white tabular-nums">60</div>
       </div>
 
       <!-- 壓力條 -->
-      <div class="flex-1 mx-8">
+      <div class="flex-1 mx-3 sm:mx-8">
         <div class="flex justify-between mb-1">
-          <span class="text-sm font-bold text-red-400">情緒壓力</span>
-          <span id="stress-val" class="text-sm font-bold text-red-400">20%</span>
+          <span class="text-xs sm:text-sm font-bold text-red-400">情緒壓力</span>
+          <span id="stress-val" class="text-xs sm:text-sm font-bold text-red-400">20%</span>
         </div>
-        <div class="h-8 bg-slate-700 rounded-full overflow-hidden border border-slate-600 relative">
+        <div class="h-7 sm:h-8 bg-slate-700 rounded-full overflow-hidden border border-slate-600 relative">
           <div id="stress-bar" class="h-full bg-gradient-to-r from-green-500 via-yellow-500 to-red-600 transition-all duration-250" style="width: 20%;"></div>
         </div>
       </div>
 
       <!-- 滿意度 -->
-      <div class="text-center w-44">
-        <div class="text-gray-400 text-sm font-bold">顧客滿意度</div>
+      <div class="text-center w-36 sm:w-44">
+        <div class="text-gray-400 text-xs sm:text-sm font-bold">顧客滿意度</div>
         <div class="flex items-center justify-center gap-2">
-          <span id="sat-icon" class="text-4xl">😐</span>
-          <span id="sat-val" class="text-5xl font-black text-blue-400 tabular-nums">70</span>
+          <span id="sat-icon" class="text-3xl sm:text-4xl">😐</span>
+          <span id="sat-val" class="text-4xl sm:text-5xl font-black text-blue-400 tabular-nums">70</span>
         </div>
       </div>
     </div>
 
     <!-- 事件區 -->
-    <div id="event-area" class="relative flex-1 bg-slate-800/30 rounded-2xl border-2 border-dashed border-slate-600 mb-4 overflow-hidden">
-      <div id="empty-msg" class="absolute inset-0 flex items-center justify-center text-slate-600 text-xl font-bold pointer-events-none">
+    <div id="event-area" class="relative flex-1 bg-slate-800/30 rounded-2xl border-2 border-dashed border-slate-600 mb-3 sm:mb-4 overflow-hidden">
+      <div id="empty-msg" class="absolute inset-0 flex items-center justify-center text-slate-600 text-lg sm:text-xl font-bold pointer-events-none">
         等待事件發生...
       </div>
     </div>
 
-    <!-- 操作區 -->
-    <div class="grid grid-cols-3 gap-6 h-32">
-      <button id="btn-soothe" onclick="handleAction('soothe')" class="btn-action bg-green-600 hover:bg-green-500 text-white rounded-xl flex flex-col items-center justify-center relative">
-        <span class="text-3xl font-black">安撫</span>
-        <div class="fatigue-bar absolute bottom-0 left-0 h-1 bg-white/50 w-full transition-all"></div>
+    <!-- ✅ 疲勞提示：放在按鈕上方，固定高度，手機不會把按鈕推到看不到 -->
+    <div id="fatigue-msg" class="text-center text-orange-400 font-bold opacity-0 transition-opacity"></div>
+
+    <!-- 操作區（響應式縮矮） -->
+    <div class="grid grid-cols-3 gap-3 sm:gap-6 controls-wrap">
+      <button id="btn-soothe" onclick="handleAction('soothe')" class="btn-action controls-btn bg-green-600 hover:bg-green-500 text-white rounded-xl flex flex-col items-center justify-center relative">
+        <span class="controls-title">安撫</span>
+        <div class="fatigue-bar absolute bottom-0 left-0 bg-white/50 w-full transition-all"></div>
       </button>
-      <button id="btn-explain" onclick="handleAction('explain')" class="btn-action bg-yellow-600 hover:bg-yellow-500 text-white rounded-xl flex flex-col items-center justify-center relative">
-        <span class="text-3xl font-black">說明</span>
-        <div class="fatigue-bar absolute bottom-0 left-0 h-1 bg-white/50 w-full transition-all"></div>
+      <button id="btn-explain" onclick="handleAction('explain')" class="btn-action controls-btn bg-yellow-600 hover:bg-yellow-500 text-white rounded-xl flex flex-col items-center justify-center relative">
+        <span class="controls-title">說明</span>
+        <div class="fatigue-bar absolute bottom-0 left-0 bg-white/50 w-full transition-all"></div>
       </button>
-      <button id="btn-act" onclick="handleAction('act')" class="btn-action bg-red-600 hover:bg-red-500 text-white rounded-xl flex flex-col items-center justify-center relative">
-        <span class="text-3xl font-black">行動</span>
-        <div class="fatigue-bar absolute bottom-0 left-0 h-1 bg-white/50 w-full transition-all"></div>
+      <button id="btn-act" onclick="handleAction('act')" class="btn-action controls-btn bg-red-600 hover:bg-red-500 text-white rounded-xl flex flex-col items-center justify-center relative">
+        <span class="controls-title">行動</span>
+        <div class="fatigue-bar absolute bottom-0 left-0 bg-white/50 w-full transition-all"></div>
       </button>
     </div>
 
-    <div id="fatigue-msg" class="text-center text-orange-400 font-bold h-6 mt-2 opacity-0 transition-opacity"></div>
   </div>
 
   <!-- 3. 結算畫面 -->
-  <div id="result-screen" class="hidden fixed inset-0 z-50 bg-black flex flex-col items-center justify-center p-8 overflow-y-auto">
-    <h2 class="text-5xl font-black text-red-500 mb-8 tracking-widest uppercase border-b-4 border-red-500 pb-2">挑戰結束</h2>
+  <div id="result-screen" class="hidden fixed inset-0 z-50 bg-black flex flex-col items-center justify-center p-6 sm:p-8 overflow-y-auto">
+    <h2 class="text-4xl sm:text-5xl font-black text-red-500 mb-8 tracking-widest uppercase border-b-4 border-red-500 pb-2">挑戰結束</h2>
 
     <div class="text-center mb-10 space-y-4 max-w-3xl">
-      <p id="final-remark-1" class="text-2xl text-white font-light fade-in-text"></p>
-      <p id="final-remark-2" class="text-2xl text-white font-light fade-in-text"></p>
+      <p id="final-remark-1" class="text-xl sm:text-2xl text-white font-light fade-in-text"></p>
+      <p id="final-remark-2" class="text-xl sm:text-2xl text-white font-light fade-in-text"></p>
     </div>
 
-    <div class="flex gap-8 mb-10 w-full max-w-4xl">
+    <div class="flex flex-col sm:flex-row gap-6 sm:gap-8 mb-10 w-full max-w-4xl">
       <div class="flex-1 bg-gray-900 p-6 rounded-xl border border-gray-800 text-center">
         <div class="text-gray-400 text-sm uppercase">總分</div>
         <div id="final-score" class="text-6xl font-black text-yellow-400">0</div>
@@ -236,35 +242,35 @@
 
   const EVENTS = [
     // soothe
-    { id: 'angry',   emoji: '😠', title: '憤怒客訴',     prompt: '我要見你們主管！',           type: 'soothe',  color: 'bg-red-500' },
-    { id: 'crying',  emoji: '😢', title: '情緒崩潰',     prompt: '我真的快撐不住了…',         type: 'soothe',  color: 'bg-indigo-500' },
-    { id: 'panic',   emoji: '😱', title: '恐慌發作',     prompt: '我呼吸不到…我好怕！',       type: 'soothe',  color: 'bg-fuchsia-600' },
-    { id: 'rude',    emoji: '😤', title: '嫌你臉太臭',   prompt: '你可以不要那麼不耐煩嗎？',   type: 'soothe',  color: 'bg-rose-600' },
-    { id: 'gender',  emoji: '🙅‍♀️', title: '指定女性空服員', prompt: '我要女生來服務！你不行。',  type: 'soothe',  color: 'bg-pink-600' },
-    { id: 'baby',    emoji: '👶', title: '嬰兒哭鬧',     prompt: '哇啊啊啊！！！',             type: 'soothe',  color: 'bg-pink-500' },
+    { id: 'angry',   emoji: '😠', title: '憤怒客訴',       prompt: '我要見你們主管！',             type: 'soothe',  color: 'bg-red-500' },
+    { id: 'crying',  emoji: '😢', title: '情緒崩潰',       prompt: '我真的快撐不住了…',           type: 'soothe',  color: 'bg-indigo-500' },
+    { id: 'panic',   emoji: '😱', title: '恐慌發作',       prompt: '我呼吸不到…我好怕！',         type: 'soothe',  color: 'bg-fuchsia-600' },
+    { id: 'rude',    emoji: '😤', title: '嫌你臉太臭',     prompt: '你可以不要那麼不耐煩嗎？',     type: 'soothe',  color: 'bg-rose-600' },
+    { id: 'gender',  emoji: '🙅‍♀️', title: '指定女性空服員', prompt: '我要女生來服務！你不行。',     type: 'soothe',  color: 'bg-pink-600' },
+    { id: 'baby',    emoji: '👶', title: '嬰兒哭鬧',       prompt: '哇啊啊啊！！！',               type: 'soothe',  color: 'bg-pink-500' },
 
     // explain
-    { id: 'anxiety', emoji: '😰', title: '時間焦慮',     prompt: '轉機要來不及了！',           type: 'explain', color: 'bg-orange-500' },
-    { id: 'seat',    emoji: '💺', title: '要求換座位',   prompt: '我不想坐這裡，幫我換！',     type: 'explain', color: 'bg-teal-600' },
-    { id: 'narrow',  emoji: '📏', title: '座位太狹窄',   prompt: '這也太擠了吧？',             type: 'explain', color: 'bg-cyan-700' },
-    { id: 'fat',     emoji: '😫', title: '隔壁太擠',     prompt: '隔壁一直擠到我！',           type: 'explain', color: 'bg-sky-700' },
-    { id: 'mealbad', emoji: '🍱', title: '餐點不好吃',   prompt: '這個也太難吃了吧？',         type: 'explain', color: 'bg-amber-700' },
-    { id: 'vip',     emoji: '👑', title: '升艙要求',     prompt: '我是高卡會員，應該要升艙。',   type: 'explain', color: 'bg-purple-600' },
+    { id: 'anxiety', emoji: '😰', title: '時間焦慮',       prompt: '轉機要來不及了！',             type: 'explain', color: 'bg-orange-500' },
+    { id: 'seat',    emoji: '💺', title: '要求換座位',     prompt: '我不想坐這裡，幫我換！',       type: 'explain', color: 'bg-teal-600' },
+    { id: 'narrow',  emoji: '📏', title: '座位太狹窄',     prompt: '這也太擠了吧？',               type: 'explain', color: 'bg-cyan-700' },
+    { id: 'fat',     emoji: '😫', title: '隔壁太擠',       prompt: '隔壁一直擠到我！',             type: 'explain', color: 'bg-sky-700' },
+    { id: 'mealbad', emoji: '🍱', title: '餐點不好吃',     prompt: '這個也太難吃了吧？',           type: 'explain', color: 'bg-amber-700' },
+    { id: 'vip',     emoji: '👑', title: '升艙要求',       prompt: '我是高卡會員，應該要升艙。',     type: 'explain', color: 'bg-purple-600' },
 
     // act
-    { id: 'spill',   emoji: '🥤', title: '打翻飲料',     prompt: '咖啡灑在我身上了！',         type: 'act',     color: 'bg-amber-800' },
-    { id: 'sick',    emoji: '🤢', title: '身體不適',     prompt: '我頭好暈…想吐。',           type: 'act',     color: 'bg-lime-700' },
-    { id: 'blanket', emoji: '🧣', title: '太冷要毛毯',   prompt: '我快冷死了，快給我毯子。',   type: 'act',     color: 'bg-blue-600' },
-    { id: 'wifi',    emoji: '📶', title: 'Wi-Fi 不能用', prompt: '網路連不上，你們在幹嘛？',   type: 'act',     color: 'bg-slate-600' },
-    { id: 'toilet',  emoji: '🚻', title: '廁所排隊爆滿', prompt: '我快憋不住了！',             type: 'act',     color: 'bg-emerald-700' },
-    { id: 'headset', emoji: '🎧', title: '耳機壞了',     prompt: '耳機沒聲音，幫我處理。',     type: 'act',     color: 'bg-violet-700' }
+    { id: 'spill',   emoji: '🥤', title: '打翻飲料',       prompt: '咖啡灑在我身上了！',           type: 'act',     color: 'bg-amber-800' },
+    { id: 'sick',    emoji: '🤢', title: '身體不適',       prompt: '我頭好暈…想吐。',             type: 'act',     color: 'bg-lime-700' },
+    { id: 'blanket', emoji: '🧣', title: '太冷要毛毯',     prompt: '我快冷死了，快給我毯子。',     type: 'act',     color: 'bg-blue-600' },
+    { id: 'wifi',    emoji: '📶', title: 'Wi-Fi 不能用',   prompt: '網路連不上，你們在幹嘛？',     type: 'act',     color: 'bg-slate-600' },
+    { id: 'toilet',  emoji: '🚻', title: '廁所排隊爆滿',   prompt: '我快憋不住了！',               type: 'act',     color: 'bg-emerald-700' },
+    { id: 'headset', emoji: '🎧', title: '耳機壞了',       prompt: '耳機沒聲音，幫我處理。',       type: 'act',     color: 'bg-violet-700' }
   ];
 
   const EVENT_BY_ID = Object.fromEntries(EVENTS.map(e => [e.id, e]));
 
   const IMPACTS = {
-    soothe:  { soothe: [ 14, -10], explain: [  6,  -6], act: [  4,  0] },
-    explain: { soothe: [ -6,   6], explain: [ 11,  -6], act: [  1,  4] },
+    soothe:  { soothe: [ 14, -10], explain: [  6,  -6], act: [  4,   0] },
+    explain: { soothe: [ -6,   6], explain: [ 11,  -6], act: [  1,   4] },
     act:     { soothe: [ -6,  10], explain: [  2,   4], act: [ 14,  -5] }
   };
 
@@ -276,13 +282,8 @@
     { r1: "「你撐住的瞬間，就是『職場素養』被看見的瞬間。」", r2: "「下一次：更早覺察、更快降壓、更清楚決策。」" }
   ];
 
-  /**
-   * ✅ 連鎖規則（保持簡短、但很有感）
-   * onSpawn: 事件出現後可能引發
-   * onResolve: 事件被處理後可能引發
-   */
+  // 事件連鎖規則
   const CHAIN_RULES = {
-    // 指定女性空服員 → 容易引發「嫌你臉臭」或「憤怒客訴」
     gender: {
       onSpawn: [
         { id: 'rude',  p: 0.55, delayMs: [650, 1100] },
@@ -292,59 +293,29 @@
         { id: 'angry', p: 0.20, delayMs: [650, 1100] }
       ]
     },
-
-    // 隔壁太擠 / 座位太狹窄 → 常引發「換座位」
     fat: {
-      onResolve: [
-        { id: 'seat', p: 0.55, delayMs: [650, 1100] }
-      ]
+      onResolve: [{ id: 'seat', p: 0.55, delayMs: [650, 1100] }]
     },
     narrow: {
-      onResolve: [
-        { id: 'seat', p: 0.45, delayMs: [650, 1100] }
-      ]
+      onResolve: [{ id: 'seat', p: 0.45, delayMs: [650, 1100] }]
     },
-
-    // 換座位 → 可能引發「時間焦慮」（卡住流程）
     seat: {
-      onResolve: [
-        { id: 'anxiety', p: 0.35, delayMs: [650, 1050] }
-      ]
+      onResolve: [{ id: 'anxiety', p: 0.35, delayMs: [650, 1050] }]
     },
-
-    // 餐點不好吃 → 容易升級成「憤怒客訴」
     mealbad: {
-      onResolve: [
-        { id: 'angry', p: 0.45, delayMs: [650, 1100] }
-      ]
+      onResolve: [{ id: 'angry', p: 0.45, delayMs: [650, 1100] }]
     },
-
-    // Wi-Fi 不能用 → 容易引發「嫌你臉臭」（你越解釋越火）
     wifi: {
-      onResolve: [
-        { id: 'rude', p: 0.35, delayMs: [650, 1100] }
-      ]
+      onResolve: [{ id: 'rude', p: 0.35, delayMs: [650, 1100] }]
     },
-
-    // 打翻飲料 → 可能引發「憤怒客訴」（衣服髒了）
     spill: {
-      onResolve: [
-        { id: 'angry', p: 0.35, delayMs: [650, 1100] }
-      ]
+      onResolve: [{ id: 'angry', p: 0.35, delayMs: [650, 1100] }]
     },
-
-    // 身體不適 → 可能引發「恐慌發作」（情緒升級）
     sick: {
-      onResolve: [
-        { id: 'panic', p: 0.30, delayMs: [650, 1100] }
-      ]
+      onResolve: [{ id: 'panic', p: 0.30, delayMs: [650, 1100] }]
     },
-
-    // 嬰兒哭鬧 → 可能引發「嫌你臉臭」（旁人抱怨你沒處理）
     baby: {
-      onResolve: [
-        { id: 'rude', p: 0.28, delayMs: [650, 1100] }
-      ]
+      onResolve: [{ id: 'rude', p: 0.28, delayMs: [650, 1100] }]
     }
   };
 
@@ -406,6 +377,7 @@
     document.getElementById('game-screen').classList.add('flex');
 
     state.isPlaying = true;
+    updateButtonsState(false);
     updateUI();
 
     state.timerInterval = setInterval(() => {
@@ -415,7 +387,7 @@
       if (state.time <= 0) endGame();
     }, 1000);
 
-    // ✅ 保持你現有的節奏設定（前 20 秒不慢）
+    // 節奏曲線：前 20 秒不慢，後段漸爆
     setSpawner(2200);
 
     state.neglectInterval = setInterval(() => {
@@ -465,7 +437,6 @@
     spawnSpecificEvent(template.id, 'natural');
   }
 
-  // ✅ 允許連鎖直接指定某個事件 id
   function spawnSpecificEvent(eventId, source = 'chain') {
     const template = EVENT_BY_ID[eventId];
     if (!template) return;
@@ -487,7 +458,6 @@
     renderEventCard(eventObj);
     els.emptyMsg.classList.add('hidden');
 
-    // 連鎖：出現後
     maybeTriggerChain(eventObj, 'onSpawn');
   }
 
@@ -505,7 +475,6 @@
   }
 
   function scheduleChainSpawn(eventId, delayMs) {
-    // 避免一次連鎖把畫面塞爆：如果滿了，延後重試幾次
     let attempts = 0;
     const maxAttempts = 4;
 
@@ -516,9 +485,7 @@
         return;
       }
       attempts++;
-      if (attempts <= maxAttempts) {
-        setTimeout(trySpawn, 280);
-      }
+      if (attempts <= maxAttempts) setTimeout(trySpawn, 280);
     };
 
     setTimeout(trySpawn, delayMs);
@@ -580,7 +547,6 @@
     if (evIndex === -1) return;
     const event = state.activeEvents[evIndex];
 
-    // 疲勞：100% -> 70% -> 40% -> 20%
     const counts = state.fatigue[actionType];
     let multiplier = 1.0;
     if (counts === 1) multiplier = 0.7;
@@ -606,7 +572,6 @@
     state.selectedEventId = null;
     updateButtonsState(false);
 
-    // ✅ 連鎖：處理後
     maybeTriggerChain(event, 'onResolve');
 
     updateUI();
