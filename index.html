@@ -106,7 +106,6 @@
     <h2 class="text-2xl sm:text-3xl text-white mb-5 text-center">空服員 60 秒壓力測試</h2>
 
     <div class="bg-slate-800 p-6 sm:p-8 rounded-2xl shadow-2xl text-center border border-slate-700 max-w-3xl w-full">
-      <!-- 說明順序（你指定的邏輯） -->
       <div class="text-left text-slate-100 mb-4 leading-relaxed">
         <div class="text-lg sm:text-xl font-black mb-2">你是空服員</div>
         <div class="text-sm sm:text-base text-slate-200">
@@ -337,7 +336,7 @@
     query, orderByChild, limitToLast, get
   } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 
-  // ✅ 直接用你提供的真實設定（不用再貼第二份）
+  // ✅ 直接用你提供的真實設定
   const FIREBASE_CONFIG = {
     apiKey: "AIzaSyD6y-tPy0grqmZAUTLRKGbp5RxdmK1t7pA",
     authDomain: "selmode.firebaseapp.com",
@@ -363,9 +362,10 @@
       const cred = await signInAnonymously(fb.auth);
       fb.user = cred.user;
       fb.ready = true;
+      console.log("✅ Firebase 初始化成功，使用者 UID:", fb.user.uid);
       return true;
     } catch (e) {
-      console.error("Firebase init error:", e);
+      console.error("❌ Firebase 初始化錯誤:", e);
       fb.ready = false;
       return false;
     }
@@ -400,7 +400,6 @@
   ];
   const EVENT_BY_ID = Object.fromEntries(EVENTS.map(e => [e.id, e]));
 
-  // Action -> EventType : [Satisfaction Δ, Stress Δ]
   const IMPACTS = {
     soothe:  { soothe: [ 14, -10], explain: [  6,  -6], act: [  4,   0] },
     explain: { soothe: [ -6,   6], explain: [ 11,  -6], act: [  1,   4] },
@@ -433,9 +432,6 @@
     expert: { name: '專家模式', spawnMul: 1.0, maxEvents: 6, fatigueMin: 0.2, online: true }
   };
 
-  /*********************
-   * 狀態 & DOM
-   *********************/
   let state = {
     modeKey: 'expert',
     mode: MODES.expert,
@@ -447,7 +443,6 @@
     activeEvents: [],
     selectedEventId: null,
 
-    // 疲勞：只看「短暫連續」—連續用同一種才累，換別種就 reset（你要的）
     fatigue: { soothe: 0, explain: 0, act: 0 },
 
     isPlaying: false,
@@ -462,7 +457,6 @@
     lastLbFetchAt: 0,
     lbAutoTimer: null,
 
-    // 疲勞提示節流：避免一直刷同一句
     fatigueLastMsg: "",
     fatigueMsgAt: 0
   };
@@ -536,22 +530,15 @@
   };
   const randInt = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
 
-  /*********************
-   * Start：先初始化 Firebase（讓你一開始就知道可不可用）
-   *********************/
   (async () => {
     const ok = await initFirebase();
     els.start.status.textContent = ok ? "Firebase：已連線（專家模式可用）" : "Firebase：連線失敗（專家模式暫不可用）";
   })();
 
-  /*********************
-   * 開始前教學（四項規則，10 秒）
-   *********************/
   window.beginPrestart = async (modeKey) => {
     state.modeKey = modeKey;
     state.mode = MODES[modeKey];
 
-    // 專家模式：先確認 Firebase OK（避免結束才發現不能登記）
     if (state.mode.online) {
       els.start.status.textContent = "Firebase：檢查中…";
       const ok = await initFirebase();
@@ -593,9 +580,6 @@
     tick();
   };
 
-  /*********************
-   * 遊戲主流程
-   *********************/
   function resetStateForGame() {
     state.time = GAME_DURATION;
     state.satisfaction = 70;
@@ -644,7 +628,6 @@
     updateUI();
     updateFatigueUI(true);
 
-    // Timer
     state.timerInterval = setInterval(() => {
       state.time--;
       updateUI();
@@ -652,10 +635,8 @@
       if (state.time <= 0) endGame();
     }, 1000);
 
-    // Spawner initial
     setSpawner(Math.round(2200 * state.mode.spawnMul));
 
-    // Neglect penalty（不按就掉滿意度、升壓力）
     state.neglectInterval = setInterval(() => {
       if (state.activeEvents.length > 0) {
         const satPenalty = state.activeEvents.length * 2.0;
@@ -672,7 +653,6 @@
     }, 1000);
   }
 
-  // 難度曲線：前 10 秒就有感，逐漸提高，後 20 秒暴走
   function updateDifficulty() {
     if (!state.isPlaying) return;
     const elapsed = GAME_DURATION - state.time;
@@ -801,7 +781,6 @@
     });
   }
 
-  // 疲勞倍率：短暫連續才累（換別種會 reset）
   function getMultiplier(counts) {
     if (counts === 0) return 1.0;
     if (counts === 1) return 0.7;
@@ -809,7 +788,6 @@
     return state.mode.fatigueMin;
   }
 
-  // ✅ 疲勞提示「人性化」，並且節流避免一直刷
   function updateFatigueUI(force = false) {
     const labels = { soothe: '安撫', explain: '說明', act: '行動' };
 
@@ -826,7 +804,6 @@
     const wCount = state.fatigue[worst];
     const wPct = Math.round(getMultiplier(wCount) * 100);
 
-    // 只有真的疲勞（倍率 < 100%）才提醒
     if (wCount >= 1) {
       const hint =
         worst === 'act'
@@ -836,14 +813,12 @@
             : "提醒：必要時也要說明或行動";
       const msg = `連續使用「${labels[worst]}」效果剩 ${wPct}%　${hint}`;
 
-      // 節流：2 秒內同一句不重複刷
       if (force || msg !== state.fatigueLastMsg || (now - state.fatigueMsgAt) > 2000) {
         els.fatigueMsg.textContent = msg;
         state.fatigueLastMsg = msg;
         state.fatigueMsgAt = now;
       }
     } else {
-      // 不疲勞時給一句很短的策略提醒（不刷屏）
       const msg = "輪替使用三種做法，效果最好";
       if (force || msg !== state.fatigueLastMsg) {
         els.fatigueMsg.textContent = msg;
@@ -860,7 +835,6 @@
     if (evIndex === -1) return;
     const event = state.activeEvents[evIndex];
 
-    // 疲勞：只看「短暫連續」
     const counts = state.fatigue[actionType];
     const multiplier = getMultiplier(counts);
 
@@ -869,7 +843,6 @@
       else state.fatigue[key] = 0;
     }
 
-    // 按錯會變差（滿意度下降/壓力上升），但「總分不會負」
     const impact = IMPACTS[actionType][event.type];
     const actualSat = impact[0] * multiplier;
     const actualStress = impact[1] * multiplier;
@@ -893,7 +866,6 @@
   };
 
   function updateUI() {
-    // 結束條件：滿意度歸零或壓力爆表
     if ((state.satisfaction <= 0 || state.stress >= 100) && state.isPlaying) {
       state.satisfaction = Math.max(0, state.satisfaction);
       state.stress = Math.min(100, state.stress);
@@ -925,7 +897,6 @@
     clearInterval(state.neglectInterval);
     document.body.classList.remove('shake-hard');
 
-    // 清空事件卡避免殘留
     els.eventArea.querySelectorAll('.event-card').forEach(n => n.remove());
 
     showScreen('result');
@@ -934,10 +905,9 @@
     const finalStress = Math.floor(state.stress);
     const resolve = state.resolveCount;
 
-    // ✅ 你要的：不會負分、快手高分
     const base = resolve * 100;
     const bonus = finalSat * 5;
-    const mult = 1 + ((100 - finalStress) / 200); // 1.0 ~ 1.5
+    const mult = 1 + ((100 - finalStress) / 200);
     const totalScore = Math.max(0, Math.floor((base + bonus) * mult));
 
     state.finalScore = totalScore;
@@ -953,12 +923,10 @@
     els.result.r1.textContent = remark.r1;
     els.result.r2.textContent = remark.r2;
 
-    // 淡入
     setTimeout(() => {
       document.querySelectorAll('.fade-in-text').forEach(el => el.classList.add('visible'));
     }, 120);
 
-    // 模式差異：新手不顯示統一榜
     if (state.mode.online) {
       els.result.note.textContent = "專家模式：可登記到統一榜";
       els.lb.wrap.classList.remove('hidden');
@@ -967,7 +935,6 @@
       els.lb.btnSave.textContent = "登記";
       els.lb.status.textContent = "已連線";
 
-      // 拉一次榜 + 每 8 秒刷新（節流）
       refreshLeaderboard(true);
       clearInterval(state.lbAutoTimer);
       state.lbAutoTimer = setInterval(() => refreshLeaderboard(false), 8000);
@@ -978,12 +945,7 @@
     }
   }
 
-  /*********************
-   * 統一榜（精修）
-   * - 允許同分、允許重複暱稱
-   * - 讀取 Top50（score）與 Latest20（createdAt）
-   * - 寫入成功後立即刷新
-   *********************/
+  // ✅ 改良的登記功能：詳細錯誤訊息
   window.saveScoreOnline = async () => {
     if (!state.mode.online) return;
 
@@ -1007,24 +969,43 @@
 
     try {
       const ok = await initFirebase();
-      if (!ok) throw new Error("Firebase init failed");
+      if (!ok) throw new Error("Firebase 初始化失敗");
 
-      // ✅ push 產生唯一 key：同分同名都能進
+      if (!fb.user) throw new Error("使用者未登入");
+
+      console.log("準備寫入資料:", payload);
+      
       const listRef = ref(fb.db, "scores");
       const newRef = push(listRef);
+      
+      console.log("寫入路徑:", newRef.toString());
       await set(newRef, payload);
 
+      console.log("寫入成功！");
       els.lb.btnSave.textContent = "已登記";
       els.lb.status.textContent = "登記成功，刷新榜單…";
 
       await refreshLeaderboard(true);
 
     } catch (e) {
-      console.error("saveScoreOnline error:", e);
+      console.error("saveScoreOnline 詳細錯誤:", e);
+      console.error("錯誤代碼:", e.code);
+      console.error("錯誤訊息:", e.message);
+      
       els.lb.btnSave.disabled = false;
       els.lb.btnSave.textContent = "重送";
-      els.lb.status.textContent = "登記失敗（可能是 Rules / 網路）";
-      alert("登記失敗。\n請到 Firebase Realtime Database → 規則（Rules）確認 .write 允許 auth != null 或 true。");
+      
+      let errorMsg = "登記失敗：";
+      if (e.code === 'PERMISSION_DENIED' || e.message.includes('permission')) {
+        errorMsg += "權限不足\n\n請到 Firebase Console → Realtime Database → Rules，設定為：\n\n{\n  \"rules\": {\n    \"scores\": {\n      \".read\": true,\n      \".write\": \"auth != null\"\n    }\n  }\n}";
+      } else if (e.message.includes('未登入')) {
+        errorMsg += "匿名登入失敗，請檢查網路連線";
+      } else {
+        errorMsg += e.message || "未知錯誤";
+      }
+      
+      els.lb.status.textContent = `失敗：${e.code || e.message}`;
+      alert(errorMsg);
     }
   };
 
@@ -1032,7 +1013,7 @@
     if (!state.mode.online) return;
 
     const now = Date.now();
-    if (!force && now - state.lastLbFetchAt < 4500) return; // 節流
+    if (!force && now - state.lastLbFetchAt < 4500) return;
     state.lastLbFetchAt = now;
 
     els.lb.status.textContent = "更新中…";
@@ -1041,7 +1022,6 @@
       const ok = await initFirebase();
       if (!ok) throw new Error("Firebase init failed");
 
-      // Top50：score 排序取後 50，再用 tie-breaker（stress asc / resolve desc / createdAt desc）
       const qTop = query(ref(fb.db, "scores"), orderByChild("score"), limitToLast(50));
       const topSnap = await get(qTop);
       const topArr = [];
@@ -1057,7 +1037,6 @@
         return Number(b.createdAt||0) - Number(a.createdAt||0);
       });
 
-      // Latest20：createdAt 取後 20（最新在前）
       const qLatest = query(ref(fb.db, "scores"), orderByChild("createdAt"), limitToLast(20));
       const latestSnap = await get(qLatest);
       const latestArr = [];
@@ -1110,29 +1089,22 @@
     }[c]));
   }
 
-  /*********************
-   * Result actions
-   *********************/
   window.restartSameMode = () => {
-    // 同模式再來一次（不 reload）
     showScreen('game');
     startGame();
   };
 
   window.backToHome = () => {
-    // 回主畫面（不 reload）
     clearInterval(state.timerInterval);
     clearInterval(state.spawnerInterval);
     clearInterval(state.neglectInterval);
     clearInterval(state.lbAutoTimer);
     document.body.classList.remove('shake-hard');
 
-    // reset UI
     resetStateForGame();
     showScreen('start');
   };
 
-  // Init
   updateButtonsState(false);
   updateFatigueUI(true);
 </script>
