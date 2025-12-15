@@ -786,61 +786,62 @@
     return state.mode.fatigueMin;
   }
 
-  /*********************
-   * ✅ 疲勞提醒（修正版）
-   * - 只在「連續同一招 >=2」才提醒
-   * - 2.5 秒冷卻
-   * - 內容沒變不重刷
-   *********************/
-  function updateFatigueUI(force = false) {
-    const labels = { soothe: '安撫', explain: '說明', act: '行動' };
+ /*********************
+ * ✅ 疲勞提醒（穩定版）
+ * - 只在「連續同一招 >= 2」才提示疲勞
+ * - 文字沒變：不重刷
+ * - 有變化：至少間隔 2.5 秒才更新（避免狂跳）
+ * - force=true：允許立刻更新一次（例如開局/切畫面）
+ *********************/
+function updateFatigueUI(force = false) {
+  const labels = { soothe: '安撫', explain: '說明', act: '行動' };
 
-    for (const key of ['soothe','explain','act']) {
-      const count = state.fatigue[key];
-      const mul = getMultiplier(count);
-      const pct = Math.round(mul * 100);
-      els.bars[key].style.width = `${pct}%`;
-      els.meta[key].textContent = `效果 ${pct}%`;
-    }
-
-    const now = Date.now();
-
-    // 找目前「連續使用」的是哪一招（只有一個會 >0）
-    let streakKey = null;
-    let streakCount = 0;
-    for (const k of ['soothe','explain','act']) {
-      if (state.fatigue[k] > 0) { streakKey = k; streakCount = state.fatigue[k]; break; }
-    }
-
-    let msg = "輪替使用三種做法，效果最好";
-    if (streakKey && streakCount >= 2) {
-      const wPct = Math.round(getMultiplier(streakCount) * 100);
-      const hint =
-        streakKey === 'act'
-          ? "建議：先接住情緒，再做處置"
-          : streakKey === 'explain'
-            ? "建議：先共感，再說明"
-            : "建議：必要時也要說明或行動";
-      msg = `連續使用「${labels[streakKey]}」效果剩 ${wPct}%　${hint}`;
-    }
-
-    const cooldownMs = 2500;
-    const canUpdate = force || (msg !== state.fatigueLastMsg && (now - state.fatigueMsgAt) >= 250) || (now - state.fatigueMsgAt) >= cooldownMs;
-
-    // 重點：不要一直刷同一句
-    if (force || msg !== state.fatigueLastMsg) {
-      if (force || (now - state.fatigueMsgAt) >= 250) {
-        els.fatigueMsg.textContent = msg;
-        state.fatigueLastMsg = msg;
-        state.fatigueMsgAt = now;
-      }
-    } else if (canUpdate && (now - state.fatigueMsgAt) >= cooldownMs) {
-      // 同一句但過很久：最多也只是刷新一次（通常不會進到這段）
-      els.fatigueMsg.textContent = msg;
-      state.fatigueLastMsg = msg;
-      state.fatigueMsgAt = now;
-    }
+  // 1) UI（效果條）
+  for (const key of ['soothe','explain','act']) {
+    const count = state.fatigue[key];
+    const mul = getMultiplier(count);
+    const pct = Math.round(mul * 100);
+    els.bars[key].style.width = `${pct}%`;
+    els.meta[key].textContent = `效果 ${pct}%`;
   }
+
+  // 2) 訊息（只抓目前連續那一招）
+  let streakKey = null;
+  let streakCount = 0;
+  for (const k of ['soothe','explain','act']) {
+    if (state.fatigue[k] > 0) { streakKey = k; streakCount = state.fatigue[k]; break; }
+  }
+
+  let msg = "輪替使用三種做法，效果最好";
+  if (streakKey && streakCount >= 2) {
+    const wPct = Math.round(getMultiplier(streakCount) * 100);
+    const hint =
+      streakKey === 'act'
+        ? "建議：先接住情緒，再做處置"
+        : streakKey === 'explain'
+          ? "建議：先共感，再說明"
+          : "建議：必要時也要說明或行動";
+    msg = `連續使用「${labels[streakKey]}」效果剩 ${wPct}%　${hint}`;
+  }
+
+  const now = Date.now();
+  const COOLDOWN = 2500;
+
+  // 3) 只在「訊息變了」才考慮更新；且至少隔 COOLDOWN
+  if (force) {
+    els.fatigueMsg.textContent = msg;
+    state.fatigueLastMsg = msg;
+    state.fatigueMsgAt = now;
+    return;
+  }
+
+  if (msg === state.fatigueLastMsg) return;             // 同一句：永遠不刷（杜絕連發感）
+  if ((now - state.fatigueMsgAt) < COOLDOWN) return;    // 太近：不刷
+
+  els.fatigueMsg.textContent = msg;
+  state.fatigueLastMsg = msg;
+  state.fatigueMsgAt = now;
+}
 
   window.handleAction = (actionType) => {
     if (!state.selectedEventId || !state.isPlaying) return;
