@@ -6,6 +6,28 @@
   <title>職場服務大挑戰 (空服員) - 單機版</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    /* === Mobile responsive controls === */
+.controls-wrap { height: 7.5rem; }           /* default: 120px */
+.controls-btn  { padding: 0.9rem 0.75rem; }  /* default button padding */
+.controls-title{ font-size: 1.75rem; line-height: 1.1; } /* ~text-3xl */
+.controls-sub  { font-size: 0.9rem; line-height: 1.1; }  /* small helper text */
+
+@media (max-width: 640px) {
+  /* 手機：底部縮矮，避免被擠出畫面 */
+  .controls-wrap { height: 6.2rem; }                 /* 約 100px */
+  .controls-btn  { padding: 0.65rem 0.6rem; }
+  .controls-title{ font-size: 1.5rem; }              /* 變小一階 */
+  .fatigue-bar   { height: 3px !important; }         /* 疲勞條更薄 */
+  #fatigue-msg   { font-size: 0.95rem; line-height: 1.2; }
+}
+
+@media (max-width: 380px) {
+  /* 超小螢幕再縮一點 */
+  .controls-wrap { height: 5.6rem; }                 /* 約 90px */
+  .controls-title{ font-size: 1.35rem; }
+  #fatigue-msg   { font-size: 0.85rem; }
+}
+
     :root { font-family: 'Inter', system-ui, sans-serif; }
     body { overflow: hidden; user-select: none; }
 
