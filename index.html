@@ -3,13 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>職場服務大挑戰 (空服員) - 單機版</title>
+  <title>職場服務大挑戰 - 單機版</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     :root { font-family: 'Inter', system-ui, sans-serif; }
     body { overflow: hidden; user-select: none; }
-
-    /* ✅ 手機高度關鍵：用 100dvh 避免被網址列吃高度 */
     .app-dvh { height: 100dvh; }
 
     @keyframes shake {
@@ -38,8 +36,8 @@
       position: absolute;
       cursor: pointer;
       transition: all 0.2s;
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-      max-width: 300px;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.06);
+      max-width: 320px;
       z-index: 10;
     }
     .event-card.selected {
@@ -59,24 +57,20 @@
     .fade-in-text { opacity: 0; transition: opacity 0.9s ease-in; }
     .visible { opacity: 1; }
 
-    /* ===== Dashboard sizes ===== */
     .dash-card { padding: 0.75rem; }
     .dash-number { font-size: 2.6rem; line-height: 1; }
     .dash-label { font-size: 0.75rem; }
-
     @media (min-width: 640px) {
       .dash-number { font-size: 3.1rem; }
       .dash-card { padding: 1rem; }
     }
 
-    /* ===== Controls: always visible ===== */
     .controls-wrap { min-height: 86px; }
     .controls-title { font-size: 1.35rem; line-height: 1.05; font-weight: 900; }
     .controls-meta  { font-size: 0.9rem; line-height: 1.1; font-weight: 800; opacity: 0.95; }
     .fatigue-track { height: 7px; border-radius: 999px; background: rgba(255,255,255,0.22); }
     .fatigue-bar { height: 7px; border-radius: 999px; background: rgba(255,255,255,0.95); }
 
-    /* ✅ 手機/平板：控制區貼底 + safe-area，絕不被裁切 */
     .mobile-sticky {
       position: sticky;
       bottom: 0;
@@ -86,7 +80,6 @@
       backdrop-filter: blur(6px);
     }
 
-    /* fatigue 提示固定可見，不佔太多高度 */
     #fatigue-msg {
       min-height: 1.25rem;
       font-weight: 900;
@@ -104,29 +97,37 @@
 <body class="bg-slate-900 text-white min-h-screen flex flex-col">
 
   <!-- Start -->
-  <div id="start-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-900 transition-opacity duration-500">
-    <h1 class="text-5xl sm:text-6xl font-black text-yellow-400 mb-3 tracking-wider">職場服務大挑戰</h1>
-    <h2 class="text-2xl sm:text-3xl text-white mb-8">空服員 60秒暴走實測</h2>
-    <div class="bg-slate-800 p-6 sm:p-8 rounded-2xl shadow-2xl text-center border border-slate-700 max-w-2xl">
-      <p class="text-gray-400 mb-6 text-base sm:text-lg">
-        規則：<span class="text-white font-bold">點選事件卡</span> → 按下方按鈕處理。<br>
-        你不會「做錯」，但你可能會「撐不住」。
+  <div id="start-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-900 transition-opacity duration-500 p-6">
+    <h1 class="text-5xl sm:text-6xl font-black text-yellow-400 mb-3 tracking-wider text-center">職場服務大挑戰</h1>
+    <h2 class="text-2xl sm:text-3xl text-white mb-8 text-center">空服員 60 秒壓力測試</h2>
+
+    <div class="bg-slate-800 p-6 sm:p-8 rounded-2xl shadow-2xl text-center border border-slate-700 max-w-2xl w-full">
+      <p class="text-gray-300 mb-6 text-base sm:text-lg">
+        你會看到事件卡片不斷出現<br>
+        選一張卡再按下方按鈕處理
       </p>
-      <button onclick="startCountdown()" class="bg-blue-600 hover:bg-blue-500 text-white text-3xl sm:text-4xl font-bold py-5 sm:py-6 px-14 sm:px-20 rounded-full shadow-lg transition transform hover:scale-105">
-        開始挑戰
-      </button>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <button onclick="beginPrestart('newbie')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-2xl font-black py-5 rounded-xl shadow-lg transition transform hover:scale-[1.02]">
+          新手模式
+        </button>
+        <button onclick="beginPrestart('expert')" class="bg-blue-600 hover:bg-blue-500 text-white text-2xl font-black py-5 rounded-xl shadow-lg transition transform hover:scale-[1.02]">
+          專家模式
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- Countdown -->
-  <div id="countdown-overlay" class="hidden fixed inset-0 z-[60] bg-black/90 flex items-center justify-center">
-    <span id="countdown-number" class="text-9xl font-black text-white">3</span>
+  <!-- Prestart teaching countdown -->
+  <div id="prestart-overlay" class="hidden fixed inset-0 z-[60] bg-black/90 flex flex-col items-center justify-center p-8 text-center">
+    <div id="prestart-tip" class="text-2xl sm:text-3xl font-black text-white mb-8 max-w-3xl"></div>
+    <div id="prestart-num" class="text-8xl sm:text-9xl font-black text-yellow-300 tabular-nums">10</div>
   </div>
 
   <!-- Game -->
   <div id="game-screen" class="hidden flex-col w-full max-w-7xl mx-auto p-3 sm:p-4 app-dvh">
 
-    <!-- Dashboard (two rows, stress full width) -->
+    <!-- Dashboard -->
     <div class="bg-slate-800/50 rounded-xl border border-slate-700 dash-card mb-3 sm:mb-4">
       <div class="flex items-end justify-between gap-3">
         <div class="text-center w-28 sm:w-32">
@@ -157,11 +158,11 @@
     <!-- Events -->
     <div id="event-area" class="relative flex-1 bg-slate-800/30 rounded-2xl border-2 border-dashed border-slate-600 mb-2 sm:mb-3 overflow-hidden">
       <div id="empty-msg" class="absolute inset-0 flex items-center justify-center text-slate-600 text-lg sm:text-xl font-bold pointer-events-none">
-        等待事件發生...
+        等待事件發生
       </div>
     </div>
 
-    <!-- Sticky control area (always visible on mobile) -->
+    <!-- Sticky controls -->
     <div class="mobile-sticky pt-2">
       <div id="fatigue-msg" class="text-center text-orange-300 mb-2"></div>
 
@@ -193,17 +194,18 @@
 
   <!-- Result -->
   <div id="result-screen" class="hidden fixed inset-0 z-50 bg-black flex flex-col items-center justify-center p-6 sm:p-8 overflow-y-auto">
-    <h2 class="text-4xl sm:text-5xl font-black text-red-500 mb-8 tracking-widest uppercase border-b-4 border-red-500 pb-2">挑戰結束</h2>
+    <h2 class="text-4xl sm:text-5xl font-black text-red-500 mb-8 tracking-widest border-b-4 border-red-500 pb-2">挑戰結束</h2>
 
-    <div class="text-center mb-10 space-y-4 max-w-3xl">
+    <div class="text-center mb-8 space-y-3 max-w-3xl">
       <p id="final-remark-1" class="text-xl sm:text-2xl text-white font-light fade-in-text"></p>
       <p id="final-remark-2" class="text-xl sm:text-2xl text-white font-light fade-in-text"></p>
     </div>
 
-    <div class="flex flex-col sm:flex-row gap-6 sm:gap-8 mb-10 w-full max-w-4xl">
+    <div class="flex flex-col sm:flex-row gap-6 sm:gap-8 mb-8 w-full max-w-4xl">
       <div class="flex-1 bg-gray-900 p-6 rounded-xl border border-gray-800 text-center">
         <div class="text-gray-400 text-sm uppercase">總分</div>
         <div id="final-score" class="text-6xl font-black text-yellow-400">0</div>
+        <div id="final-mult" class="text-sm text-gray-400 mt-2"></div>
       </div>
       <div class="flex-1 bg-gray-900 p-6 rounded-xl border border-gray-800 text-center space-y-2">
         <div class="flex justify-between border-b border-gray-800 pb-2">
@@ -223,12 +225,12 @@
 
     <div class="w-full max-w-2xl bg-gray-900 rounded-xl p-6 border border-gray-700 mb-8">
       <h3 class="text-xl text-yellow-400 font-bold mb-4 flex justify-between items-center">
-        <span>🏆 現場英雄榜 (Top 5)</span>
-        <button onclick="customConfirm('確定要清空排行榜嗎？', () => clearLeaderboard())" class="text-xs text-gray-600 hover:text-red-500 underline">清空紀錄</button>
+        <span>現場英雄榜</span>
+        <button onclick="customConfirm('確定要清空排行榜嗎？', () => clearLeaderboard())" class="text-xs text-gray-600 hover:text-red-500 underline">清空</button>
       </h3>
 
       <div class="flex gap-2 mb-4">
-        <input type="text" id="player-name" placeholder="輸入暱稱..." class="flex-1 bg-gray-800 text-white px-4 py-2 rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500" maxlength="10">
+        <input type="text" id="player-name" placeholder="輸入暱稱" class="flex-1 bg-gray-800 text-white px-4 py-2 rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500" maxlength="10">
         <button id="btn-save" onclick="saveScore()" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-lg font-bold">登記</button>
       </div>
 
@@ -236,7 +238,7 @@
         <thead>
           <tr class="text-gray-500 text-sm border-b border-gray-800">
             <th class="pb-2">#</th>
-            <th class="pb-2">姓名/隊伍</th>
+            <th class="pb-2">姓名</th>
             <th class="pb-2 text-right">分數</th>
             <th class="pb-2 text-right">壓力</th>
           </tr>
@@ -246,13 +248,12 @@
     </div>
 
     <button onclick="location.reload()" class="text-gray-400 hover:text-white border border-gray-600 hover:border-white px-8 py-3 rounded-full transition">
-      下一位挑戰者 (重新開始)
+      下一位挑戰者
     </button>
   </div>
 
 <script>
   const GAME_DURATION = 60;
-  const MAX_EVENTS_ON_SCREEN = 6;
 
   const EVENTS = [
     { id: 'angry',   emoji: '😠', title: '憤怒客訴',       prompt: '我要見你們主管！',             type: 'soothe',  color: 'bg-red-500' },
@@ -285,11 +286,11 @@
   };
 
   const FINAL_REMARKS = [
-    { r1: "「你做的不是『對不對』，而是『能不能穩住自己』。」", r2: "「情緒不是敵人，是訊號：先聽見，再回應。」" },
-    { r1: "「壓力一高，最先失真的通常不是英文，是語氣與判斷。」", r2: "「你能做的，是把情緒轉成可合作的訊息。」" },
-    { r1: "「你不是不努力，而是資源有限：注意力、時間、耐心會快速耗盡。」", r2: "「適度轉換策略，才是自我調節的開始。」" },
-    { r1: "「同理不是順從：先承接感受，再清楚說界線。」", r2: "「穩定的回應，比華麗的句型更專業。」" },
-    { r1: "「你撐住的瞬間，就是『職場素養』被看見的瞬間。」", r2: "「下一次：更早覺察、更快降壓、更清楚決策。」" }
+    { r1: "「你做的不是對或錯，而是能不能穩住自己。」", r2: "「先聽見情緒，再做回應。」" },
+    { r1: "「壓力一高，語氣與判斷最先失真。」", r2: "「把情緒轉成可合作的訊息。」" },
+    { r1: "「注意力、時間、耐心都會耗。」", r2: "「換策略，才是自我調節。」" },
+    { r1: "「先承接感受，再清楚說界線。」", r2: "「穩定的回應，比華麗更專業。」" },
+    { r1: "「你撐住的瞬間，就是職場素養被看見。」", r2: "「更早覺察、更快降壓、更清楚決策。」" }
   ];
 
   const CHAIN_RULES = {
@@ -305,7 +306,15 @@
     baby: { onResolve: [{ id: 'rude', p: 0.28, delayMs: [650, 1100] }] }
   };
 
+  const MODES = {
+    newbie: { name: '新手模式', spawnMul: 3.0, maxEvents: 4, fatigueMin: 0.4 },
+    expert: { name: '專家模式', spawnMul: 1.0, maxEvents: 6, fatigueMin: 0.2 }
+  };
+
   let state = {
+    modeKey: 'expert',
+    mode: MODES.expert,
+
     time: GAME_DURATION,
     satisfaction: 70,
     stress: 20,
@@ -313,6 +322,7 @@
     activeEvents: [],
     selectedEventId: null,
     fatigue: { soothe: 0, explain: 0, act: 0 },
+
     isPlaying: false,
     timerInterval: null,
     spawnerInterval: null,
@@ -329,6 +339,7 @@
     eventArea: document.getElementById('event-area'),
     emptyMsg: document.getElementById('empty-msg'),
     fatigueMsg: document.getElementById('fatigue-msg'),
+
     meta: {
       soothe: document.getElementById('meta-soothe'),
       explain: document.getElementById('meta-explain'),
@@ -343,27 +354,47 @@
       soothe: document.getElementById('btn-soothe'),
       explain: document.getElementById('btn-explain'),
       act: document.getElementById('btn-act')
+    },
+
+    pre: {
+      wrap: document.getElementById('prestart-overlay'),
+      tip: document.getElementById('prestart-tip'),
+      num: document.getElementById('prestart-num')
     }
   };
 
   function randInt(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
 
-  function startCountdown() {
+  function beginPrestart(modeKey) {
+    state.modeKey = modeKey;
+    state.mode = MODES[modeKey];
+
     document.getElementById('start-screen').classList.add('hidden');
-    document.getElementById('countdown-overlay').classList.remove('hidden');
+    els.pre.wrap.classList.remove('hidden');
 
-    let count = 3;
-    const countEl = document.getElementById('countdown-number');
+    let t = 10;
+    const tips = [
+      "第一步：點選事件卡片",
+      "第二步：按下方按鈕處理",
+      "連續用同一招會疲勞"
+    ];
 
-    const cInt = setInterval(() => {
-      count--;
-      if (count > 0) countEl.innerText = count;
-      else {
-        clearInterval(cInt);
-        document.getElementById('countdown-overlay').classList.add('hidden');
+    const tick = () => {
+      els.pre.num.textContent = t;
+
+      const idx = (t > 7) ? 0 : (t > 4) ? 1 : (t > 1) ? 2 : 2;
+      els.pre.tip.textContent = tips[idx];
+
+      t--;
+      if (t < 0) {
+        els.pre.wrap.classList.add('hidden');
         startGame();
+        return;
       }
-    }, 1000);
+      setTimeout(tick, 1000);
+    };
+
+    tick();
   }
 
   function startGame() {
@@ -382,7 +413,8 @@
       if (state.time <= 0) endGame();
     }, 1000);
 
-    setSpawner(2200);
+    // 初始生成速度也套用模式倍率
+    setSpawner(Math.round(2200 * state.mode.spawnMul));
 
     state.neglectInterval = setInterval(() => {
       if (state.activeEvents.length > 0) {
@@ -402,16 +434,18 @@
 
   function updateDifficulty() {
     if (!state.isPlaying) return;
+
     const elapsed = GAME_DURATION - state.time;
-    let newInterval;
+    let base;
 
-    if (elapsed < 10) newInterval = 2200;
-    else if (elapsed < 20) newInterval = 1700;
-    else if (elapsed < 30) newInterval = 1250;
-    else if (elapsed < 40) newInterval = 950;
-    else if (elapsed < 50) newInterval = 700;
-    else newInterval = 520;
+    if (elapsed < 10) base = 2200;
+    else if (elapsed < 20) base = 1700;
+    else if (elapsed < 30) base = 1250;
+    else if (elapsed < 40) base = 950;
+    else if (elapsed < 50) base = 700;
+    else base = 520;
 
+    const newInterval = Math.round(base * state.mode.spawnMul);
     if (state.currentSpawnMs !== newInterval) setSpawner(newInterval);
   }
 
@@ -420,7 +454,7 @@
     state.currentSpawnMs = ms;
     state.spawnerInterval = setInterval(() => {
       if (!state.isPlaying) return;
-      if (state.activeEvents.length < MAX_EVENTS_ON_SCREEN) spawnRandomEvent();
+      if (state.activeEvents.length < state.mode.maxEvents) spawnRandomEvent();
     }, ms);
   }
 
@@ -432,7 +466,7 @@
   function spawnSpecificEvent(eventId, source = 'chain') {
     const template = EVENT_BY_ID[eventId];
     if (!template || !state.isPlaying) return;
-    if (state.activeEvents.length >= MAX_EVENTS_ON_SCREEN) return;
+    if (state.activeEvents.length >= state.mode.maxEvents) return;
 
     const top = Math.random() * 62 + 3;
     const left = Math.random() * 64 + 3;
@@ -469,7 +503,7 @@
     const maxAttempts = 4;
     const trySpawn = () => {
       if (!state.isPlaying) return;
-      if (state.activeEvents.length < MAX_EVENTS_ON_SCREEN) {
+      if (state.activeEvents.length < state.mode.maxEvents) {
         spawnSpecificEvent(eventId, 'chain');
         return;
       }
@@ -532,7 +566,7 @@
     if (counts === 0) return 1.0;
     if (counts === 1) return 0.7;
     if (counts === 2) return 0.4;
-    return 0.2;
+    return state.mode.fatigueMin;
   }
 
   function updateFatigueUI(force = false) {
@@ -542,27 +576,23 @@
       const count = state.fatigue[key];
       const mul = getMultiplier(count);
       const pct = Math.round(mul * 100);
-
-      // bar width (100/70/40/20)
       els.bars[key].style.width = `${pct}%`;
       els.meta[key].textContent = `效果 ${pct}%`;
     }
 
-    // 人性化提醒：把「要回到顧客情緒」用一句話點醒
     const worst = ['soothe','explain','act'].sort((a,b)=>state.fatigue[b]-state.fatigue[a])[0];
     const wCount = state.fatigue[worst];
     const wPct = Math.round(getMultiplier(wCount) * 100);
 
-    let msg = "提示：三種做法輪替，效果最好。";
+    let msg = "輪替使用三種做法，效果最好";
     if (wCount >= 1) {
       const hint =
         worst === 'act'
-          ? "你一直在處理事情，但對方可能更需要被理解。先接住情緒，再做處置。"
+          ? "先接住情緒，再做處置"
           : worst === 'explain'
-            ? "你一直在講規則，但情緒還沒降下來。先共感，再說明。"
-            : "你一直在安撫，但有些狀況需要具體說明或行動。";
-
-      msg = `疲勞提醒：你連續用「${labels[worst]}」，效果剩 ${wPct}%。${hint}`;
+            ? "先共感，再說明"
+            : "需要時也要說明或行動";
+      msg = `你連續用「${labels[worst]}」效果剩 ${wPct}%　${hint}`;
     }
     els.fatigueMsg.textContent = msg;
   }
@@ -645,12 +675,19 @@
     const finalSat = Math.floor(state.satisfaction);
     const finalStress = Math.floor(state.stress);
     const resolve = state.resolveCount;
-    const totalScore = Math.floor((finalSat * 1.2) + (resolve * 6) - (finalStress * 1.0));
+
+    // ✅ 新總分：不扣壓力，不會負分
+    // base + bonus 再乘倍率
+    const base = resolve * 100;
+    const bonus = finalSat * 5;
+    const mult = 1 + ((100 - finalStress) / 200); // 1.0 ~ 1.5
+    const totalScore = Math.floor((base + bonus) * mult);
 
     document.getElementById('final-score').innerText = totalScore;
     document.getElementById('final-sat').innerText = finalSat;
     document.getElementById('final-stress').innerText = finalStress;
     document.getElementById('final-resolve').innerText = resolve;
+    document.getElementById('final-mult').innerText = `倍率 x ${mult.toFixed(2)}`;
 
     const remark = FINAL_REMARKS[Math.floor(Math.random() * FINAL_REMARKS.length)];
     document.getElementById('final-remark-1').innerText = remark.r1;
@@ -663,7 +700,7 @@
     renderLeaderboard();
   }
 
-  const STORAGE_KEY = 'FA_Challenge_Rank_V2';
+  const STORAGE_KEY = 'FA_Challenge_Rank_V3';
 
   function getScores() {
     try { const s = localStorage.getItem(STORAGE_KEY); return s ? JSON.parse(s) : []; }
