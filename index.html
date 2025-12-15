@@ -30,7 +30,6 @@
       80% { transform: scale(1.1); opacity: 1; }
       100% { transform: scale(1); opacity: 1; }
     }
-
     .event-card {
       animation: popIn 0.28s ease-out forwards;
       position: absolute;
@@ -69,44 +68,71 @@
     .visible { opacity: 1; }
 
     /* =========================
-       ✅ Responsive controls
-       目標：手機直向不擠爆，三顆按鈕下方都看得到
+       ✅ Responsive layout + fatigue visibility
        ========================= */
-    .controls-wrap { height: 7.5rem; }                 /* default (desktop-ish): 120px */
-    .controls-btn  { padding: 0.9rem 0.75rem; }
-    .controls-title{ font-size: 1.75rem; line-height: 1.1; font-weight: 900; }
-    .fatigue-bar   { height: 4px; }
 
-    /* 疲勞提示：固定高度，不會把按鈕往下推到看不到 */
-    #fatigue-msg { min-height: 1.35rem; }
+    /* 手機/平板：上方儀表板更小，壓力條「整條滿版」 */
+    .dash-card { padding: 0.75rem; }
+    .dash-number { font-size: 3rem; line-height: 1; }
+    .dash-label { font-size: 0.75rem; }
+
+    /* 按鈕區高度控制（確保不被擠出） */
+    .controls-wrap { height: 7.0rem; }
+    .controls-btn { padding: 0.75rem 0.6rem; }
+    .controls-title { font-size: 1.6rem; line-height: 1.1; font-weight: 900; }
+
+    /* 疲勞條：一定要有高度 + 對比更強 + 可見 */
+    .fatigue-bar {
+      height: 7px;
+      border-radius: 999px;
+      opacity: 0.95;
+    }
+    .fatigue-track {
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.18);
+    }
+
+    /* 人性化提醒：固定顯示（不是只在懲罰時才出現） */
+    #fatigue-msg {
+      min-height: 1.5rem;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+    }
+
+    @media (max-width: 1024px) {
+      .dash-number { font-size: 2.4rem; }
+      .dash-card { padding: 0.65rem; }
+    }
 
     @media (max-width: 640px) {
-      .controls-wrap { height: 6.2rem; }               /* ~100px */
-      .controls-btn  { padding: 0.65rem 0.6rem; }
-      .controls-title{ font-size: 1.45rem; }
-      .fatigue-bar   { height: 3px; }
-      #fatigue-msg   { font-size: 0.95rem; line-height: 1.2; }
+      .controls-wrap { height: 6.2rem; }
+      .controls-btn { padding: 0.6rem 0.55rem; }
+      .controls-title { font-size: 1.35rem; }
+      .fatigue-bar, .fatigue-track { height: 6px; }
+      #fatigue-msg { font-size: 0.95rem; line-height: 1.15; }
     }
 
     @media (max-width: 380px) {
-      .controls-wrap { height: 5.6rem; }               /* ~90px */
-      .controls-title{ font-size: 1.30rem; }
-      #fatigue-msg   { font-size: 0.85rem; }
+      .controls-wrap { height: 5.6rem; }
+      .controls-title { font-size: 1.22rem; }
+      #fatigue-msg { font-size: 0.86rem; }
     }
   </style>
 </head>
+
 <body class="bg-slate-900 text-white min-h-screen flex flex-col">
 
   <!-- 1. 開始畫面 -->
   <div id="start-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-900 transition-opacity duration-500">
-    <h1 class="text-6xl font-black text-yellow-400 mb-4 tracking-wider">職場服務大挑戰</h1>
-    <h2 class="text-3xl text-white mb-10">空服員 60秒暴走實測</h2>
-    <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl text-center border border-slate-700 max-w-2xl">
-      <p class="text-gray-400 mb-6 text-lg">
+    <h1 class="text-5xl sm:text-6xl font-black text-yellow-400 mb-3 sm:mb-4 tracking-wider">職場服務大挑戰</h1>
+    <h2 class="text-2xl sm:text-3xl text-white mb-8 sm:mb-10">空服員 60秒暴走實測</h2>
+    <div class="bg-slate-800 p-6 sm:p-8 rounded-2xl shadow-2xl text-center border border-slate-700 max-w-2xl">
+      <p class="text-gray-400 mb-6 text-base sm:text-lg">
         規則：<span class="text-white font-bold">點選事件卡</span> → 按下方按鈕處理。<br>
         你不會「做錯」，但你可能會「撐不住」。
       </p>
-      <button onclick="startCountdown()" class="bg-blue-600 hover:bg-blue-500 text-white text-4xl font-bold py-6 px-20 rounded-full shadow-lg transition transform hover:scale-105">
+      <button onclick="startCountdown()" class="bg-blue-600 hover:bg-blue-500 text-white text-3xl sm:text-4xl font-bold py-5 sm:py-6 px-14 sm:px-20 rounded-full shadow-lg transition transform hover:scale-105">
         開始挑戰
       </button>
     </div>
@@ -120,31 +146,32 @@
   <!-- 2. 遊戲主畫面 -->
   <div id="game-screen" class="hidden flex-col h-screen w-full max-w-7xl mx-auto p-3 sm:p-4">
 
-    <!-- 儀表板 -->
-    <div class="flex justify-between items-end mb-3 sm:mb-4 bg-slate-800/50 p-3 sm:p-4 rounded-xl border border-slate-700">
-      <!-- 倒數 -->
-      <div class="text-center w-28 sm:w-32">
-        <div class="text-gray-400 text-xs sm:text-sm font-bold">剩餘時間</div>
-        <div id="timer" class="text-5xl sm:text-6xl font-black text-white tabular-nums">60</div>
+    <!-- ✅ 儀表板：手機/平板改成兩層，壓力條整條滿版 -->
+    <div class="bg-slate-800/50 rounded-xl border border-slate-700 dash-card mb-3 sm:mb-4">
+      <!-- 上排：時間 + 滿意度 -->
+      <div class="flex items-end justify-between gap-3">
+        <div class="text-center w-28 sm:w-32">
+          <div class="dash-label text-gray-400 font-bold">剩餘時間</div>
+          <div id="timer" class="dash-number font-black text-white tabular-nums">60</div>
+        </div>
+
+        <div class="text-center w-36 sm:w-44">
+          <div class="dash-label text-gray-400 font-bold">顧客滿意度</div>
+          <div class="flex items-center justify-center gap-2">
+            <span id="sat-icon" class="text-3xl sm:text-4xl">😐</span>
+            <span id="sat-val" class="text-4xl sm:text-5xl font-black text-blue-400 tabular-nums">70</span>
+          </div>
+        </div>
       </div>
 
-      <!-- 壓力條 -->
-      <div class="flex-1 mx-3 sm:mx-8">
+      <!-- 下排：壓力條（完整一整條） -->
+      <div class="mt-3">
         <div class="flex justify-between mb-1">
           <span class="text-xs sm:text-sm font-bold text-red-400">情緒壓力</span>
           <span id="stress-val" class="text-xs sm:text-sm font-bold text-red-400">20%</span>
         </div>
-        <div class="h-7 sm:h-8 bg-slate-700 rounded-full overflow-hidden border border-slate-600 relative">
+        <div class="h-7 sm:h-8 bg-slate-700 rounded-full overflow-hidden border border-slate-600 relative w-full">
           <div id="stress-bar" class="h-full bg-gradient-to-r from-green-500 via-yellow-500 to-red-600 transition-all duration-250" style="width: 20%;"></div>
-        </div>
-      </div>
-
-      <!-- 滿意度 -->
-      <div class="text-center w-36 sm:w-44">
-        <div class="text-gray-400 text-xs sm:text-sm font-bold">顧客滿意度</div>
-        <div class="flex items-center justify-center gap-2">
-          <span id="sat-icon" class="text-3xl sm:text-4xl">😐</span>
-          <span id="sat-val" class="text-4xl sm:text-5xl font-black text-blue-400 tabular-nums">70</span>
         </div>
       </div>
     </div>
@@ -156,25 +183,31 @@
       </div>
     </div>
 
-    <!-- ✅ 疲勞提示：放在按鈕上方，固定高度，手機不會把按鈕推到看不到 -->
-    <div id="fatigue-msg" class="text-center text-orange-400 font-bold opacity-0 transition-opacity"></div>
+    <!-- ✅ 疲勞提示：固定顯示（人性化） -->
+    <div class="mb-2">
+      <div id="fatigue-msg" class="text-center text-orange-300"></div>
+    </div>
 
     <!-- 操作區（響應式縮矮） -->
     <div class="grid grid-cols-3 gap-3 sm:gap-6 controls-wrap">
-      <button id="btn-soothe" onclick="handleAction('soothe')" class="btn-action controls-btn bg-green-600 hover:bg-green-500 text-white rounded-xl flex flex-col items-center justify-center relative">
+      <button id="btn-soothe" onclick="handleAction('soothe')" class="btn-action controls-btn bg-green-600 hover:bg-green-500 text-white rounded-xl flex flex-col items-center justify-center relative overflow-hidden">
         <span class="controls-title">安撫</span>
-        <div class="fatigue-bar absolute bottom-0 left-0 bg-white/50 w-full transition-all"></div>
+        <div class="absolute bottom-2 left-3 right-3 fatigue-track"></div>
+        <div class="fatigue-bar absolute bottom-2 left-3 bg-white/90 transition-all" style="width:100%"></div>
       </button>
-      <button id="btn-explain" onclick="handleAction('explain')" class="btn-action controls-btn bg-yellow-600 hover:bg-yellow-500 text-white rounded-xl flex flex-col items-center justify-center relative">
+
+      <button id="btn-explain" onclick="handleAction('explain')" class="btn-action controls-btn bg-yellow-600 hover:bg-yellow-500 text-white rounded-xl flex flex-col items-center justify-center relative overflow-hidden">
         <span class="controls-title">說明</span>
-        <div class="fatigue-bar absolute bottom-0 left-0 bg-white/50 w-full transition-all"></div>
+        <div class="absolute bottom-2 left-3 right-3 fatigue-track"></div>
+        <div class="fatigue-bar absolute bottom-2 left-3 bg-white/90 transition-all" style="width:100%"></div>
       </button>
-      <button id="btn-act" onclick="handleAction('act')" class="btn-action controls-btn bg-red-600 hover:bg-red-500 text-white rounded-xl flex flex-col items-center justify-center relative">
+
+      <button id="btn-act" onclick="handleAction('act')" class="btn-action controls-btn bg-red-600 hover:bg-red-500 text-white rounded-xl flex flex-col items-center justify-center relative overflow-hidden">
         <span class="controls-title">行動</span>
-        <div class="fatigue-bar absolute bottom-0 left-0 bg-white/50 w-full transition-all"></div>
+        <div class="absolute bottom-2 left-3 right-3 fatigue-track"></div>
+        <div class="fatigue-bar absolute bottom-2 left-3 bg-white/90 transition-all" style="width:100%"></div>
       </button>
     </div>
-
   </div>
 
   <!-- 3. 結算畫面 -->
@@ -277,12 +310,11 @@
   const FINAL_REMARKS = [
     { r1: "「你做的不是『對不對』，而是『能不能穩住自己』。」", r2: "「情緒不是敵人，是訊號：先聽見，再回應。」" },
     { r1: "「壓力一高，最先失真的通常不是英文，是語氣與判斷。」", r2: "「你能做的，是把情緒轉成可合作的訊息。」" },
-    { r1: "「你不是不努力，而是資源有限：注意力、時間、耐心都會耗。」", r2: "「換策略，才是自我調節的開始。」" },
+    { r1: "「你不是不努力，而是資源有限：注意力、時間、耐心會快速消耗。」", r2: "「轉換策略，才是自我調節的開始。」" },
     { r1: "「同理不是順從：先承接感受，再清楚說界線。」", r2: "「穩定的回應，比華麗的句型更專業。」" },
     { r1: "「你撐住的瞬間，就是『職場素養』被看見的瞬間。」", r2: "「下一次：更早覺察、更快降壓、更清楚決策。」" }
   ];
 
-  // 事件連鎖規則
   const CHAIN_RULES = {
     gender: {
       onSpawn: [
@@ -293,30 +325,14 @@
         { id: 'angry', p: 0.20, delayMs: [650, 1100] }
       ]
     },
-    fat: {
-      onResolve: [{ id: 'seat', p: 0.55, delayMs: [650, 1100] }]
-    },
-    narrow: {
-      onResolve: [{ id: 'seat', p: 0.45, delayMs: [650, 1100] }]
-    },
-    seat: {
-      onResolve: [{ id: 'anxiety', p: 0.35, delayMs: [650, 1050] }]
-    },
-    mealbad: {
-      onResolve: [{ id: 'angry', p: 0.45, delayMs: [650, 1100] }]
-    },
-    wifi: {
-      onResolve: [{ id: 'rude', p: 0.35, delayMs: [650, 1100] }]
-    },
-    spill: {
-      onResolve: [{ id: 'angry', p: 0.35, delayMs: [650, 1100] }]
-    },
-    sick: {
-      onResolve: [{ id: 'panic', p: 0.30, delayMs: [650, 1100] }]
-    },
-    baby: {
-      onResolve: [{ id: 'rude', p: 0.28, delayMs: [650, 1100] }]
-    }
+    fat: { onResolve: [{ id: 'seat', p: 0.55, delayMs: [650, 1100] }] },
+    narrow: { onResolve: [{ id: 'seat', p: 0.45, delayMs: [650, 1100] }] },
+    seat: { onResolve: [{ id: 'anxiety', p: 0.35, delayMs: [650, 1050] }] },
+    mealbad: { onResolve: [{ id: 'angry', p: 0.45, delayMs: [650, 1100] }] },
+    wifi: { onResolve: [{ id: 'rude', p: 0.35, delayMs: [650, 1100] }] },
+    spill: { onResolve: [{ id: 'angry', p: 0.35, delayMs: [650, 1100] }] },
+    sick: { onResolve: [{ id: 'panic', p: 0.30, delayMs: [650, 1100] }] },
+    baby: { onResolve: [{ id: 'rude', p: 0.28, delayMs: [650, 1100] }] }
   };
 
   let state = {
@@ -350,9 +366,7 @@
     }
   };
 
-  function randInt(a, b) {
-    return Math.floor(Math.random() * (b - a + 1)) + a;
-  }
+  function randInt(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
 
   function startCountdown() {
     document.getElementById('start-screen').classList.add('hidden');
@@ -379,6 +393,7 @@
     state.isPlaying = true;
     updateButtonsState(false);
     updateUI();
+    updateFatigueUI(true);
 
     state.timerInterval = setInterval(() => {
       state.time--;
@@ -387,7 +402,6 @@
       if (state.time <= 0) endGame();
     }, 1000);
 
-    // 節奏曲線：前 20 秒不慢，後段漸爆
     setSpawner(2200);
 
     state.neglectInterval = setInterval(() => {
@@ -408,7 +422,6 @@
 
   function updateDifficulty() {
     if (!state.isPlaying) return;
-
     const elapsed = GAME_DURATION - state.time;
     let newInterval;
 
@@ -425,7 +438,6 @@
   function setSpawner(ms) {
     if (state.spawnerInterval) clearInterval(state.spawnerInterval);
     state.currentSpawnMs = ms;
-
     state.spawnerInterval = setInterval(() => {
       if (!state.isPlaying) return;
       if (state.activeEvents.length < MAX_EVENTS_ON_SCREEN) spawnRandomEvent();
@@ -439,8 +451,7 @@
 
   function spawnSpecificEvent(eventId, source = 'chain') {
     const template = EVENT_BY_ID[eventId];
-    if (!template) return;
-    if (!state.isPlaying) return;
+    if (!template || !state.isPlaying) return;
     if (state.activeEvents.length >= MAX_EVENTS_ON_SCREEN) return;
 
     const top = Math.random() * 62 + 3;
@@ -464,7 +475,6 @@
   function maybeTriggerChain(eventObj, mode) {
     const rule = CHAIN_RULES[eventObj.id];
     if (!rule || !rule[mode]) return;
-
     for (const item of rule[mode]) {
       if (!state.isPlaying) return;
       if (Math.random() <= item.p) {
@@ -477,7 +487,6 @@
   function scheduleChainSpawn(eventId, delayMs) {
     let attempts = 0;
     const maxAttempts = 4;
-
     const trySpawn = () => {
       if (!state.isPlaying) return;
       if (state.activeEvents.length < MAX_EVENTS_ON_SCREEN) {
@@ -487,7 +496,6 @@
       attempts++;
       if (attempts <= maxAttempts) setTimeout(trySpawn, 280);
     };
-
     setTimeout(trySpawn, delayMs);
   }
 
@@ -540,6 +548,60 @@
     });
   }
 
+  // ✅ 疲勞倍率（同你原本邏輯）
+  function getFatigueMultiplier(actionType) {
+    const c = state.fatigue[actionType];
+    if (c === 0) return 1.0;
+    if (c === 1) return 0.7;
+    if (c === 2) return 0.4;
+    return 0.2;
+  }
+
+  // ✅ 更新每顆按鈕的疲勞條 + 人性化文字（永遠可見）
+  function updateFatigueUI(force = false) {
+    const labels = { soothe: '安撫', explain: '說明', act: '行動' };
+
+    // 更新三顆按鈕的條
+    for (const key of ['soothe','explain','act']) {
+      const btn = els.btns[key];
+      const bar = btn.querySelector('.fatigue-bar');
+      const count = state.fatigue[key];
+
+      let width = '100%';
+      if (count === 0) width = '100%';
+      else if (count === 1) width = '70%';
+      else if (count === 2) width = '40%';
+      else width = '20%';
+
+      bar.style.width = width;
+
+      // 顏色提示：越疲勞越偏紅（用 opacity 不改色也行，但這更直覺）
+      bar.style.opacity = (count >= 3) ? '0.95' : '0.9';
+    }
+
+    // 人性化提醒：找出最疲勞的那個策略，提醒「回到顧客情緒」
+    const fatigueScore = (k) => state.fatigue[k];
+    const worst = ['soothe','explain','act'].sort((a,b)=>fatigueScore(b)-fatigueScore(a))[0];
+    const worstCount = state.fatigue[worst];
+    const worstMul = getFatigueMultiplier(worst);
+
+    let msg = "提示：三種做法輪替，效果最好。";
+    if (worstCount >= 1) {
+      const hint =
+        worst === 'act'
+          ? "你一直在『解決事情』，但顧客可能更需要被理解。"
+          : worst === 'explain'
+            ? "你一直在『講道理』，但情緒可能還沒被接住。"
+            : "你一直在『安撫』，但有些狀況需要具體行動或說明。";
+
+      msg = `疲勞提醒：你連續使用「${labels[worst]}」，效果剩 ${(worstMul*100).toFixed(0)}%。${hint}`;
+    }
+
+    // 永遠顯示（手機/平板也能看到）
+    els.fatigueMsg.textContent = msg;
+    els.fatigueMsg.style.opacity = 1;
+  }
+
   function handleAction(actionType) {
     if (!state.selectedEventId || !state.isPlaying) return;
 
@@ -547,12 +609,14 @@
     if (evIndex === -1) return;
     const event = state.activeEvents[evIndex];
 
+    // 疲勞倍率（以你原本規則）
     const counts = state.fatigue[actionType];
     let multiplier = 1.0;
     if (counts === 1) multiplier = 0.7;
     else if (counts === 2) multiplier = 0.4;
     else if (counts >= 3) multiplier = 0.2;
 
+    // 重置其他疲勞、累加本策略
     for (let key in state.fatigue) {
       if (key === actionType) state.fatigue[key]++;
       else state.fatigue[key] = 0;
@@ -566,6 +630,7 @@
     state.stress = Math.min(100, Math.max(0, state.stress + actualStress));
     state.resolveCount++;
 
+    // 移除事件
     const domEl = document.getElementById(`ev-${state.selectedEventId}`);
     if (domEl) domEl.remove();
     state.activeEvents.splice(evIndex, 1);
@@ -575,14 +640,7 @@
     maybeTriggerChain(event, 'onResolve');
 
     updateUI();
-
-    if (multiplier < 1.0) {
-      const label = actionType === 'soothe' ? '安撫' : actionType === 'explain' ? '說明' : '行動';
-      els.fatigueMsg.innerText = `【${label}】疲勞效應：效果剩 ${(multiplier * 100).toFixed(0)}%（試著切換策略）`;
-      els.fatigueMsg.style.opacity = 1;
-    } else {
-      els.fatigueMsg.style.opacity = 0;
-    }
+    updateFatigueUI();
 
     if (state.activeEvents.length === 0) els.emptyMsg.classList.remove('hidden');
   }
@@ -607,21 +665,6 @@
     else if (state.satisfaction > 55) els.satIcon.innerText = '🙂';
     else if (state.satisfaction > 25) els.satIcon.innerText = '😰';
     else els.satIcon.innerText = '🤬';
-
-    Object.keys(state.fatigue).forEach(key => {
-      const count = state.fatigue[key];
-      const btn = els.btns[key];
-      const bar = btn.querySelector('.fatigue-bar');
-
-      let width = '100%';
-      if (count === 1) width = '70%';
-      else if (count === 2) width = '40%';
-      else if (count >= 3) width = '20%';
-      bar.style.width = width;
-
-      if (count >= 3) bar.classList.add('bg-red-500');
-      else bar.classList.remove('bg-red-500');
-    });
 
     if (state.stress > 82 || state.time < 10) document.body.classList.add('shake-hard');
     else document.body.classList.remove('shake-hard');
@@ -700,15 +743,12 @@
     renderLeaderboard();
   }
 
-  function customConfirm(message, callback) {
-    if (window.confirm(message)) callback();
-  }
+  function customConfirm(message, callback) { if (window.confirm(message)) callback(); }
 
   function renderLeaderboard() {
     const tbody = document.getElementById('leaderboard-body');
     const scores = getScores();
     tbody.innerHTML = '';
-
     scores.forEach((s, i) => {
       const tr = document.createElement('tr');
       tr.className = "border-b border-gray-800 text-sm";
@@ -722,12 +762,11 @@
     });
   }
 
-  function clearLeaderboard() {
-    localStorage.removeItem(STORAGE_KEY);
-    renderLeaderboard();
-  }
+  function clearLeaderboard() { localStorage.removeItem(STORAGE_KEY); renderLeaderboard(); }
 
+  // Init
   updateButtonsState(false);
+  updateFatigueUI(true);
 </script>
 </body>
 </html>
