@@ -1021,65 +1021,73 @@
     }
   };
 
-  /*********************
-   * ✅ 統一榜：讀取（修正版）
-   * - 只抓最近 400（orderByChild(createdAt)）
-   * - 前端算 Top50：score desc → stress asc → resolve desc → createdAt desc
-   *********************/
-  window.refreshLeaderboard = async (force = false) => {
-    if (!state.mode.online) return;
+ /*********************
+ * ✅ 統一榜：讀取（修正版）
+ * - 只抓最近 400（orderByChild(createdAt)）
+ * - 前端算 Top50：score desc → stress asc → resolve desc → createdAt desc
+ *********************/
+window.refreshLeaderboard = async (force = false) => {
+  console.log(
+    "REFRESH_LEADERBOARD_BUILD",
+    "createdAt-only",
+    "force=", force,
+    new Date().toISOString()
+  );
 
-    const now = Date.now();
-    if (!force && now - state.lastLbFetchAt < 4500) return;
-    state.lastLbFetchAt = now;
+  if (!state.mode.online) return;
 
-    els.lb.status.textContent = "更新中…";
+  const now = Date.now();
+  if (!force && now - state.lastLbFetchAt < 4500) return;
+  state.lastLbFetchAt = now;
 
-    try {
-      const ok = await initFirebase();
-      if (!ok) throw new Error("Firebase init failed");
+  els.lb.status.textContent = "更新中…";
 
-      const qRecent = query(ref(fb.db, "scores"), orderByChild("createdAt"), limitToLast(LEADERBOARD_RECENT_LIMIT));
-      const snap = await get(qRecent);
+  try {
+    const ok = await initFirebase();
+    if (!ok) throw new Error("Firebase init failed");
 
-      const arr = [];
-      snap.forEach(ch => {
-        const v = ch.val() || {};
-        arr.push({
-          key: ch.key,
-          name: v.name ?? "—",
-          score: Number(v.score ?? 0),
-          stress: Number(v.stress ?? 0),
-          resolve: Number(v.resolve ?? 0),
-          createdAt: Number(v.createdAt ?? 0)
-        });
+    const qRecent = query(
+      ref(fb.db, "scores"),
+      orderByChild("createdAt"),
+      limitToLast(LEADERBOARD_RECENT_LIMIT)
+    );
+    const snap = await get(qRecent);
+
+    const arr = [];
+    snap.forEach(ch => {
+      const v = ch.val() || {};
+      arr.push({
+        key: ch.key,
+        name: v.name ?? "—",
+        score: Number(v.score ?? 0),
+        stress: Number(v.stress ?? 0),
+        resolve: Number(v.resolve ?? 0),
+        createdAt: Number(v.createdAt ?? 0)
       });
+    });
 
-      // 最新 20：依 createdAt desc
-      const latest20 = [...arr]
-        .sort((a,b) => (b.createdAt - a.createdAt))
-        .slice(0, 20);
+    const latest20 = [...arr]
+      .sort((a,b) => (b.createdAt - a.createdAt))
+      .slice(0, 20);
 
-      // Top50：score desc → stress asc → resolve desc → createdAt desc
-      const top50 = [...arr]
-        .sort((a,b) => {
-          const ds = b.score - a.score; if (ds !== 0) return ds;
-          const dst = a.stress - b.stress; if (dst !== 0) return dst;
-          const dr = b.resolve - a.resolve; if (dr !== 0) return dr;
-          return b.createdAt - a.createdAt;
-        })
-        .slice(0, 50);
+    const top50 = [...arr]
+      .sort((a,b) => {
+        const ds = b.score - a.score; if (ds !== 0) return ds;
+        const dst = a.stress - b.stress; if (dst !== 0) return dst;
+        const dr = b.resolve - a.resolve; if (dr !== 0) return dr;
+        return b.createdAt - a.createdAt;
+      })
+      .slice(0, 50);
 
-      renderTop50(top50);
-      renderLatest20(latest20);
+    renderTop50(top50);
+    renderLatest20(latest20);
 
-      els.lb.status.textContent = `更新 ${fmtTime(Date.now())}（近 ${Math.min(arr.length, LEADERBOARD_RECENT_LIMIT)} 筆計算）`;
-
-    } catch (e) {
-      console.error("refreshLeaderboard error:", e);
-      els.lb.status.textContent = "更新失敗（可能是 Rules / 網路 / indexOn）";
-    }
-  };
+    els.lb.status.textContent = `更新 ${fmtTime(Date.now())}（近 ${Math.min(arr.length, LEADERBOARD_RECENT_LIMIT)} 筆計算）`;
+  } catch (e) {
+    console.error("refreshLeaderboard error:", e);
+    els.lb.status.textContent = "更新失敗（可能是 Rules / 網路 / indexOn）";
+  }
+};
 
   function renderTop50(items) {
     els.lb.top50.innerHTML = "";
